@@ -43,7 +43,7 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark, selectedD
               variant="ghost"
               size="sm"
               onClick={onMenuToggle}
-              className="bg-pink-400 hover:bg-pink-500 shadow-lg rounded-full p-2 transition-all duration-300"
+              className="bg-pink-400 hover:bg-pink-500 shadow-lg rounded-full p-2 w-12 h-12 transition-all duration-300"
             >
               <Menu className="w-6 h-6 text-white" />
             </Button>

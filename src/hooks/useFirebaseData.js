@@ -37,6 +37,26 @@ export const useFirebaseData = (uid) => {
 
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
+  // Remove undefined fields to satisfy Firestore constraints
+  const sanitizeSpecialDate = useCallback((item) => {
+    const base = { id: item.id, nome: item.nome, data: item.data, frequencia: item.frequencia || '' };
+    if (item.hora) base.hora = item.hora;
+    return base;
+  }, []);
+
+  // Persistir lista de datas especiais (callback estável)
+  const saveSpecialDatesToFirebase = useCallback(async (datas) => {
+    try {
+      if (uid) {
+        const safe = (datas || []).map(d => sanitizeSpecialDate(d));
+        await setDoc(doc(db, 'users', uid, 'datasEspeciais', 'lista'), { datas: safe });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar datas especiais:', error);
+      throw error;
+    }
+  }, [uid, sanitizeSpecialDate]);
+
   // Chave de deduplicação estável por conteúdo (evita duplicar tarefas idênticas)
   const taskDedupeKey = useCallback((t, period) => {
     return [
@@ -78,73 +98,67 @@ export const useFirebaseData = (uid) => {
       ...task,
       id: generateId(),
       dateKey: selectedDate,
-      // Mantemos createdAt coerente com o dia selecionado para compatibilidade
       createdAt: new Date(selectedDate).toISOString()
     };
-    setAllTasks(prev => {
-      const nextAll = { ...prev, [period]: [...prev[period], newTask] };
-      // Persiste somente as tarefas que pertencem ao dia selecionado
-      const dayPayload = buildDayDataFromAll(nextAll, selectedDate);
-      if (uid) setDoc(doc(db, 'users', uid, 'agendas', selectedDate), dayPayload).catch(console.error);
-      // Atualiza visão filtrada
-      setAgendaData(filterTasksByDate(nextAll, selectedDate));
-      return nextAll;
-    });
+    const nextAll = { ...allTasks, [period]: [...(allTasks[period] || []), newTask] };
+    setAllTasks(nextAll);
+    setAgendaData(filterTasksByDate(nextAll, selectedDate));
+    try {
+      if (uid) {
+        const dayPayload = buildDayDataFromAll(nextAll, selectedDate);
+        await setDoc(doc(db, 'users', uid, 'agendas', selectedDate), dayPayload);
+        toast.success('Tarefa adicionada');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar tarefa adicionada:', err);
+      toast.error('Erro ao adicionar tarefa');
+    }
   };
 
   const toggleTask = async (_period, taskId) => {
-    // Descobre em qual data a tarefa está salva
-    let taskDateKey = null;
-    setAllTasks(prev => {
-      // Busca a tarefa no snapshot anterior
-      const found = [...prev.manha, ...prev.tarde, ...prev.noite].find(t => t.id === taskId);
-      taskDateKey = found ? getTaskDateKey(found) : selectedDate;
-      // Atualiza todas as listas (robusto contra mudança de período)
-      const next = {
-        manha: prev.manha.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-        tarde: prev.tarde.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-        noite: prev.noite.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-      };
-      // Persiste somente o dia afetado
-      const dayPayload = buildDayDataFromAll(next, taskDateKey);
-      if (uid) setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload).catch(console.error);
-      return next;
-    });
-
-    // Atualiza visão filtrada da tela
-    setAgendaData(prev => ({
-      manha: prev.manha.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-      tarde: prev.tarde.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-      noite: prev.noite.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
-    }));
+    // Descobre em qual data a tarefa está salva usando snapshot atual
+    const found = [...(allTasks.manha || []), ...(allTasks.tarde || []), ...(allTasks.noite || [])]
+      .find(t => t.id === taskId);
+    const taskDateKey = found ? getTaskDateKey(found) : selectedDate;
+    const next = {
+      manha: (allTasks.manha || []).map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+      tarde: (allTasks.tarde || []).map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+      noite: (allTasks.noite || []).map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+    };
+    setAllTasks(next);
+    setAgendaData(filterTasksByDate(next, selectedDate));
+    try {
+      if (uid) {
+        const dayPayload = buildDayDataFromAll(next, taskDateKey);
+        await setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar tarefa alternada:', err);
+    }
   };
 
   const removeTask = async (_period, taskId) => {
-    // Descobre a data onde a tarefa está salva
-    let taskDateKey = null;
-    setAllTasks(prev => {
-      const found = [...prev.manha, ...prev.tarde, ...prev.noite].find(t => t.id === taskId);
-      taskDateKey = found ? getTaskDateKey(found) : selectedDate;
-      const next = {
-        manha: prev.manha.filter(t => t.id !== taskId),
-        tarde: prev.tarde.filter(t => t.id !== taskId),
-        noite: prev.noite.filter(t => t.id !== taskId),
-      };
-      const dayPayload = buildDayDataFromAll(next, taskDateKey);
-      if (uid) setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload).then(() => {
+    // Descobre a data onde a tarefa está salva usando snapshot atual
+    const found = [...(allTasks.manha || []), ...(allTasks.tarde || []), ...(allTasks.noite || [])]
+      .find(t => t.id === taskId);
+    const taskDateKey = found ? getTaskDateKey(found) : selectedDate;
+    const next = {
+      manha: (allTasks.manha || []).filter(t => t.id !== taskId),
+      tarde: (allTasks.tarde || []).filter(t => t.id !== taskId),
+      noite: (allTasks.noite || []).filter(t => t.id !== taskId),
+    };
+    setAllTasks(next);
+    setAgendaData(filterTasksByDate(next, selectedDate));
+    try {
+      if (uid) {
+        const dayPayload = buildDayDataFromAll(next, taskDateKey);
+        await setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload);
         toast.success('Tarefa removida');
-      }).catch((err) => {
-        console.error('Erro ao remover tarefa:', err);
-        toast.error('Erro ao remover tarefa');
-      });
-      return next;
-    });
-
-    setAgendaData(prev => ({
-      manha: prev.manha.filter(t => t.id !== taskId),
-      tarde: prev.tarde.filter(t => t.id !== taskId),
-      noite: prev.noite.filter(t => t.id !== taskId),
-    }));
+      }
+    } catch (err) {
+      console.error('Erro ao remover tarefa:', err);
+      toast.error('Erro ao remover tarefa');
+    }
   };
 
   const addEntry = async (entryData) => {
@@ -210,11 +224,51 @@ export const useFirebaseData = (uid) => {
   const loadSpecialDatesFromFirebase = useCallback(async () => {
     try {
       const snap = uid ? await getDoc(doc(db, 'users', uid, 'datasEspeciais', 'lista')) : null;
-      setSpecialDates(snap.exists() ? (snap.data().datas || []) : []);
+      const raw = snap && snap.exists() ? (snap.data().datas || []) : [];
+      // Auto-prune one-time specials that already passed
+      const todayIso = new Date();
+      const y = todayIso.getFullYear();
+      const m = String(todayIso.getMonth() + 1).padStart(2, '0');
+      const d = String(todayIso.getDate()).padStart(2, '0');
+      const todayKey = `${y}-${m}-${d}`;
+      const filtered = raw.filter(s => !(s.frequencia === '' && s.data < todayKey));
+      setSpecialDates(filtered);
+      if (filtered.length !== raw.length) {
+        await saveSpecialDatesToFirebase(filtered);
+      }
     } catch (error) {
       console.error('Erro ao carregar datas especiais:', error);
     }
-  }, [uid]);
+  }, [uid, saveSpecialDatesToFirebase]);
+
+  // (definição movida para cima para evitar ReferenceError)
+
+  const addSpecialDate = async (item) => {
+    const newItem = sanitizeSpecialDate({ ...item, id: generateId() });
+    setSpecialDates(prev => {
+      const next = [...prev, newItem];
+      saveSpecialDatesToFirebase(next).then(() => {
+        toast.success('Data especial adicionada');
+      }).catch((err) => {
+        console.error('Erro ao adicionar data especial:', err);
+        toast.error('Erro ao adicionar data especial');
+      });
+      return next;
+    });
+  };
+
+  const removeSpecialDate = async (id) => {
+    setSpecialDates(prev => {
+      const next = prev.filter(d => d.id !== id);
+      saveSpecialDatesToFirebase(next).then(() => {
+        toast.success('Data especial removida');
+      }).catch((err) => {
+        console.error('Erro ao remover data especial:', err);
+        toast.error('Erro ao remover data especial');
+      });
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!uid) return; // aguarda usuário
@@ -238,10 +292,10 @@ export const useFirebaseData = (uid) => {
         });
       });
       setAllTasks(all);
-      // Não filtramos aqui para evitar capturar selectedDate antigo.
-      toast.success('Dados carregados da nuvem!', { duration: 2000 });
+      // Evita toast de sucesso repetitivo em cada atualização de snapshot
     }, (error) => {
       console.error('Erro ao carregar dados:', error);
+      // Mostra erro apenas uma vez por ciclo; evitar duplicações frequentes
       toast.error('Erro ao carregar dados da nuvem');
     });
 
@@ -250,8 +304,22 @@ export const useFirebaseData = (uid) => {
       setFinancialData(snap.exists() ? snap.data() : { entradas: [], gastos: [] });
     });
 
-    const unsubscribeSpecialDates = onSnapshot(doc(db, 'users', uid, 'datasEspeciais', 'lista'), (snap) => {
-      setSpecialDates(snap.exists() ? (snap.data().datas || []) : []);
+    const unsubscribeSpecialDates = onSnapshot(doc(db, 'users', uid, 'datasEspeciais', 'lista'), async (snap) => {
+      const raw = snap.exists() ? (snap.data().datas || []) : [];
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      const todayKey = `${y}-${m}-${d}`;
+      const filtered = raw.filter(s => !(s.frequencia === '' && s.data < todayKey));
+      setSpecialDates(filtered);
+      if (filtered.length !== raw.length) {
+        try {
+          await saveSpecialDatesToFirebase(filtered);
+        } catch (e) {
+          console.error('Erro ao atualizar lista de datas especiais:', e);
+        }
+      }
     });
 
     return () => {
@@ -259,7 +327,7 @@ export const useFirebaseData = (uid) => {
       unsubscribeFinance();
       unsubscribeSpecialDates();
     };
-  }, [filterTasksByDate, getTaskDateKey, taskDedupeKey, uid]);
+  }, [filterTasksByDate, getTaskDateKey, taskDedupeKey, uid, saveSpecialDatesToFirebase]);
 
   useEffect(() => {
     setAgendaData(filterTasksByDate(allTasks, selectedDate));
@@ -312,6 +380,8 @@ export const useFirebaseData = (uid) => {
     addExpense,
     removeTransaction,
     clearFinancialData,
-    loadTasksFromFirebase
+    loadTasksFromFirebase,
+    addSpecialDate,
+    removeSpecialDate
   };
 };

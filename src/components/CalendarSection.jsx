@@ -2,9 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Plus, Trash2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 // Helper for recurrence filtering for a specific date
 const occursOnDate = (task, date) => {
@@ -30,13 +33,47 @@ const dateKeyLocal = (d) => {
   return `${y}-${m}-${day}`;
 };
 
-const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDate }) => {
+// Check if a special date occurs within the given month/year (handles recurrence)
+const occursInMonth = (special, year, month) => {
+  const startKey = (special.data && special.data.length === 10)
+    ? special.data
+    : dateKeyLocal(new Date(special.data));
+  const [sy, sm, sd] = startKey.split('-').map(n => parseInt(n, 10));
+  const start = new Date(sy, sm - 1, sd);
+  const monthEnd = new Date(year, month + 1, 0);
+  // If the special starts after this month, it doesn't occur yet
+  if (start > monthEnd) return false;
+  // One-time: only if same year+month
+  if (!special.frequencia || special.frequencia === '') {
+    return sy === year && (sm - 1) === month;
+  }
+  // Weekly: occurs every week after start, so if started by monthEnd
+  if (special.frequencia === 'semanal') return start <= monthEnd;
+  // Monthly: occurs each month on the same day if the day exists in this month
+  if (special.frequencia === 'mensal') {
+    const daysInMonth = monthEnd.getDate();
+    return sd <= daysInMonth && start <= monthEnd;
+  }
+  // Annual: occurs in this month if month matches
+  if (special.frequencia === 'anual') return (sm - 1) === month && start <= monthEnd;
+  return false;
+};
+
+const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDate, onAddSpecialDate, onRemoveSpecialDate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
+  const [specialFilter, setSpecialFilter] = useState('ano'); // 'todas' | 'ano'
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formDate, setFormDate] = useState('');
+  const [formFreq, setFormFreq] = useState(''); // '', semanal, mensal, anual
+  const [oneTime, setOneTime] = useState(false);
+  const [withTime, setWithTime] = useState(false);
+  const [formTime, setFormTime] = useState('');
   // Responsividade: até lg (<1024px) mostramos 2 bolinhas; em telas maiores, 4
   const [maxDots, setMaxDots] = useState(4);
   useEffect(() => {
@@ -56,19 +93,8 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
   }, []);
 
   useEffect(() => {
-    // Keep special dates as FullCalendar events (optional)
-    const events = [];
-    specialDates.forEach(special => {
-      events.push({
-        id: `special-${special.nome}`,
-        title: `⭐ ${special.nome}`,
-        date: special.data,
-        backgroundColor: '#ec4899',
-        borderColor: '#ec4899',
-        textColor: '#fff'
-      });
-    });
-    setCalendarEvents(events);
+    // Do not inject title events for special dates; only render a star in day cells
+    setCalendarEvents([]);
   }, [specialDates]);
 
   // Build a map of dateStr -> array of colors for that day (using allTasks + recurrence)
@@ -94,15 +120,9 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
       });
       map.set(dateStr, colors);
     }
-    // Include special dates as a distinct dot color (optional)
-    specialDates.forEach(s => {
-      const ds = dateKeyLocal(new Date(s.data));
-      const arr = map.get(ds) || [];
-      arr.push('#ec4899');
-      map.set(ds, arr);
-    });
+    // Do not add extra dots for special dates; star will be rendered separately
     return map;
-  }, [allTasks, specialDates, currentMonth]);
+  }, [allTasks, currentMonth]);
 
   const handleDateClick = (info) => {
     if (onDateClick) {
@@ -165,6 +185,20 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                     // Render default text (day number) + custom dots row
                     const dateIso = dateKeyLocal(arg.date);
                     const colors = dayDotsMap.get(dateIso) || [];
+                    const hasSpecial = (specialDates || []).some(s => {
+                      // Recurrence handling
+                      const startKey = (s.data && s.data.length === 10) ? s.data : dateKeyLocal(new Date(s.data));
+                      if (!s.frequencia || s.frequencia === '') {
+                        return startKey === dateIso;
+                      }
+                      const start = new Date(startKey + 'T00:00:00');
+                      const date = arg.date;
+                      if (start > date) return false;
+                      if (s.frequencia === 'semanal') return start.getDay() === date.getDay();
+                      if (s.frequencia === 'mensal') return start.getDate() === date.getDate();
+                      if (s.frequencia === 'anual') return (start.getDate() === date.getDate() && start.getMonth() === date.getMonth());
+                      return false;
+                    });
                     const visible = colors.slice(0, maxDots);
                     const extra = colors.length - visible.length;
                     return {
@@ -172,6 +206,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                         <div class="fc-daygrid-day-top">
                           <a class="fc-daygrid-day-number">${arg.dayNumberText}</a>
                         </div>
+                        ${hasSpecial ? `<div class="fc-star-row" style="display:flex; justify-content:center; margin-top:4px;"><span style="display:inline-block; color:#f59e0b;">⭐</span></div>` : ''}
                         <div class="fc-dots-row" style="display:flex; gap:4px; margin-top:4px; align-items:center;">
                           ${visible.map(c => `<span class="fc-dot" style="width:8px;height:8px;border-radius:9999px;background:${c};display:inline-block;flex:0 0 auto"></span>`).join('')}
                           ${extra > 0 ? `<span class="fc-dot fc-dot-more" style="width:14px;height:14px;border:2px solid #999;border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#666;flex:0 0 auto">${extra}</span>` : ''}
@@ -201,25 +236,109 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
           <div className="md:w-96 w-full">
             <Card className="bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700">
               <CardHeader>
-                <CardTitle className="text-lg font-medium text-pink-500 flex items-center">
-                  <span className="text-2xl mr-2">📅</span>
-                  Datas Especiais do Mês
-                </CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-lg font-medium text-pink-500 flex items-center">
+                    <span className="text-2xl mr-2">📅</span>
+                    Datas Especiais do Mês
+                  </CardTitle>
+                  <div className="w-40">
+                    <Select value={specialFilter} onValueChange={(v) => setSpecialFilter(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filtro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ano">Ano atual</SelectItem>
+                        <SelectItem value="todas">Todas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
+                <div className="flex justify-end mb-3">
+                  <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-pink-500 hover:bg-pink-600"><Plus className="w-4 h-4 mr-1" /></Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Nova Data Especial</DialogTitle>
+                        <DialogDescription>Preencha os detalhes e salve para sincronizar.</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Nome</label>
+                          <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex.: Aniversário" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Data</label>
+                            <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Frequência</label>
+                            <Select value={oneTime ? '' : formFreq} onValueChange={(v) => { setFormFreq(v); setOneTime(false); }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="semanal">Semanal</SelectItem>
+                                <SelectItem value="mensal">Mensal</SelectItem>
+                                <SelectItem value="anual">Anual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="mt-2 flex items-center gap-2">
+                              <input id="one-time" type="checkbox" checked={oneTime} onChange={(e) => { setOneTime(e.target.checked); if (e.target.checked) setFormFreq(''); }} />
+                              <label htmlFor="one-time" className="text-sm">Apenas uma vez</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input id="with-time" type="checkbox" checked={withTime} onChange={(e) => setWithTime(e.target.checked)} />
+                          <label htmlFor="with-time" className="text-sm">Adicionar horário</label>
+                          {withTime && (
+                            <Input type="time" value={formTime} onChange={(e) => setFormTime(e.target.value)} className="ml-2" />
+                          )}
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={() => {
+                          if (!formName.trim() || !formDate) return;
+                          const payload = { nome: formName.trim(), data: formDate, frequencia: oneTime ? '' : formFreq, hora: withTime ? formTime : undefined };
+                          if (onAddSpecialDate) onAddSpecialDate(payload);
+                          setModalOpen(false);
+                          setFormName(''); setFormDate(''); setFormFreq(''); setOneTime(false); setWithTime(false); setFormTime('');
+                        }} className="bg-pink-500 hover:bg-pink-600">Salvar</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <div className="text-gray-700 dark:text-gray-300 text-sm space-y-2">
                   {specialDates.length === 0 ? (
                     <p className="text-gray-400">Nenhuma data especial cadastrada.</p>
                   ) : (
-                    specialDates.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
+                    (specialFilter === 'ano'
+                      ? specialDates.filter((item) => occursInMonth(item, currentMonth.year, currentMonth.month))
+                      : specialDates
+                    ).map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 justify-between">
                         <span className="w-3 h-3 rounded-full bg-pink-500"></span>
-                        <span className="font-bold">{item.nome}</span>
-                        <span>- {new Date(item.data).toLocaleDateString('pt-BR')}</span>
-                        {item.hora && <span>às {item.hora}</span>}
-                        {item.frequencia && (
-                          <span className="text-xs text-gray-500">({item.frequencia})</span>
-                        )}
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className="font-bold">{item.nome}</span>
+                          {(() => {
+                            const iso = (item.data && item.data.length === 10) ? item.data : dateKeyLocal(new Date(item.data));
+                            const [y, m, d] = iso.split('-');
+                            return <span>- {`${d}/${m}/${y}`}</span>;
+                          })()}
+                          {item.hora && <span>às {item.hora}</span>}
+                          {item.frequencia && (
+                            <span className="text-xs text-gray-500">({item.frequencia || 'única'})</span>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-500" onClick={() => onRemoveSpecialDate && onRemoveSpecialDate(item.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))
                   )}

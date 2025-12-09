@@ -42,7 +42,9 @@ function MainApp({ user }) {
     addExpense,
     removeTransaction,
     clearFinancialData,
-    loadTasksFromFirebase
+    loadTasksFromFirebase,
+    addSpecialDate,
+    removeSpecialDate
   } = useFirebaseData(user?.uid);
 
   const [currentSection, setCurrentSection] = useState('agenda');
@@ -141,6 +143,8 @@ function MainApp({ user }) {
               specialDates={specialDates}
               onDateClick={handleDateClick}
               selectedDate={selectedDate}
+              onAddSpecialDate={addSpecialDate}
+              onRemoveSpecialDate={removeSpecialDate}
             />
 
             <TaskSection

@@ -6,16 +6,11 @@ const Sidebar = ({ isOpen, onClose, currentSection, onSectionChange }) => {
   const menuItems = [
     { id: 'agenda', label: 'Agenda', icon: Calendar },
     { id: 'financas', label: 'Finanças', icon: DollarSign },
-    { id: 'settings', label: 'Configurações', icon: Settings },
+    { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ];
 
   const handleSectionClick = (sectionId) => {
-    if (sectionId === 'settings') {
-      // TODO: Implementar configurações
-      alert('Configurações em breve!');
-    } else {
-      onSectionChange(sectionId);
-    }
+    onSectionChange(sectionId);
     onClose();
   };
 

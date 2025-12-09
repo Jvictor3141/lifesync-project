@@ -5,6 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const TaskSection = ({ 
   title, 
@@ -95,14 +106,31 @@ const TaskSection = ({
           <Clock className="w-3 h-3 mr-1" />
           {task.hora}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onRemoveTask(period, task.id)}
-          className="text-gray-400 hover:text-red-400 transition-colors duration-300 p-1 ml-2"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-red-400 transition-colors duration-300 p-1 ml-2"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remover tarefa?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. A tarefa será removida.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onRemoveTask(period, task.id)}>
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     ));
   };

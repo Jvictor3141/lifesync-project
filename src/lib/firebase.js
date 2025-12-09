@@ -3,13 +3,13 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDoL4R2GmKy7gqnWXKei8V5lflH4plEMkM",
-  authDomain: "agenda-f58b7.firebaseapp.com",
-  projectId: "agenda-f58b7",
-  storageBucket: "agenda-f58b7.firebasestorage.app",
-  messagingSenderId: "88974735864",
-  appId: "1:88974735864:web:0e9a029173d6409f61be0d",
-  measurementId: "G-0DSR8JY53N"
+  apiKey: "AIzaSyBEoV9Pu5o56h1zsrN9XKVocC_jNtYzFh8",
+  authDomain: "lifesync-80344.firebaseapp.com",
+  projectId: "lifesync-80344",
+  storageBucket: "lifesync-80344.firebasestorage.app",
+  messagingSenderId: "534418067518",
+  appId: "1:534418067518:web:85a03b0cec362d1d17016f",
+  measurementId: "G-Y6YSFB2XKM"
 };
 
 const app = initializeApp(firebaseConfig);

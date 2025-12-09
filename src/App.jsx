@@ -8,15 +8,32 @@ import Sidebar from '@/components/Sidebar';
 import TaskSection from '@/components/TaskSection';
 import CalendarSection from '@/components/CalendarSection';
 import FinanceSection from '@/components/FinanceSection';
+import SettingsSection from '@/components/SettingsSection';
 import { Toaster } from '@/components/ui/sonner';
 import './App.css';
 
 function App() {
   const { user, loading } = useAuth();
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  // Depois do login, montamos o app principal (isso garante que os listeners do Firestore
+  // iniciem após a autenticação e os dados carreguem imediatamente)
+  return <MainApp user={user} />;
+}
+
+function MainApp({ user }) {
   const {
     agendaData,
     financialData,
     specialDates,
+    allTasks,
+    selectedDate,
     setSelectedDate,
     addTask,
     toggleTask,
@@ -26,13 +43,12 @@ function App() {
     removeTransaction,
     clearFinancialData,
     loadTasksFromFirebase
-  } = useFirebaseData();
+  } = useFirebaseData(user?.uid);
 
   const [currentSection, setCurrentSection] = useState('agenda');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
-  // Carregar tema do localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -41,11 +57,9 @@ function App() {
     }
   }, []);
 
-  // Alternar tema
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    
     if (newTheme) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -55,8 +69,7 @@ function App() {
     }
   };
 
-  // Handlers para tarefas
-    const handleAddTask = useCallback(async (period, task) => {
+  const handleAddTask = useCallback(async (period, task) => {
     try {
       await addTask(period, task);
     } catch {
@@ -64,25 +77,22 @@ function App() {
     }
   }, [addTask]);
 
-  const handleToggleTask = async (user, period, taskId) => {
+  const handleToggleTask = async (period, taskId) => {
     try {
-      await toggleTask(user, period, taskId);
+      await toggleTask(period, taskId);
     } catch {
       alert('Erro ao atualizar tarefa!');
     }
   };
 
-  const handleRemoveTask = async (user, period, taskId) => {
-    if (window.confirm('Tem certeza que deseja remover esta tarefa?')) {
-      try {
-        await removeTask(user, period, taskId);
-      } catch {
-        alert('Erro ao remover tarefa!');
-      }
+  const handleRemoveTask = async (period, taskId) => {
+    try {
+      await removeTask(period, taskId);
+    } catch {
+      alert('Erro ao remover tarefa!');
     }
   };
 
-  // Handlers para finanças
   const handleAddEntry = async (entryData) => {
     try {
       await addEntry(entryData);
@@ -99,28 +109,21 @@ function App() {
     }
   };
 
-  // Handler para mudança de data no calendário
   const handleDateClick = async (dateStr) => {
     const clickedDate = new Date(dateStr + 'T00:00:00');
     setSelectedDate(clickedDate.toDateString());
+    // Opcional: a filtragem já reage via efeito; manter para força de atualização imediata
     await loadTasksFromFirebase(clickedDate.toDateString());
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
   return (
-    <div className={`min-h-screen bg-pink-50 dark:bg-gray-900 font-sans ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen flex flex-col bg-pink-50 dark:bg-gray-900 font-sans ${isDark ? 'dark' : ''}`}>
       <Header
         onMenuToggle={() => setSidebarOpen(true)}
         currentSection={currentSection}
         onThemeToggle={toggleTheme}
         isDark={isDark}
+        selectedDate={selectedDate}
       />
 
       <Sidebar
@@ -130,33 +133,22 @@ function App() {
         onSectionChange={setCurrentSection}
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-4 py-8 w-full">
         {currentSection === 'agenda' && (
           <>
             <CalendarSection
-              tasks={agendaData}
+              allTasks={allTasks}
               specialDates={specialDates}
               onDateClick={handleDateClick}
+              selectedDate={selectedDate}
             />
 
             <TaskSection
-              title="Dia de Larissa"
-              tasks={agendaData.larissa}
-              onAddTask={(period, task) => handleAddTask('larissa', period, task)}
-              onToggleTask={(period, taskId) => handleToggleTask('larissa', period, taskId)}
-              onRemoveTask={(period, taskId) => handleRemoveTask('larissa', period, taskId)}
-              userType="larissa"
-            />
-
-            <hr className="my-8 border-t border-gray-300 dark:border-gray-600 opacity-40" />
-
-            <TaskSection
-              title="Dia de João Victor"
-              tasks={agendaData.joaovictor}
-              onAddTask={(period, task) => handleAddTask('joaovictor', period, task)}
-              onToggleTask={(period, taskId) => handleToggleTask('joaovictor', period, taskId)}
-              onRemoveTask={(period, taskId) => handleRemoveTask('joaovictor', period, taskId)}
-              userType="joaovictor"
+              title="Minhas Tarefas"
+              tasks={agendaData}
+              onAddTask={handleAddTask}
+              onToggleTask={handleToggleTask}
+              onRemoveTask={handleRemoveTask}
             />
           </>
         )}
@@ -170,10 +162,14 @@ function App() {
             onClearMonth={clearFinancialData}
           />
         )}
+
+        {currentSection === 'configuracoes' && (
+          <SettingsSection user={user} />
+        )}
       </main>
 
-      <footer className="w-full mt-12 py-6 bg-pink-400 bg-opacity-80 text-center text-gray-100 text-sm">
-        © 2025 Nossa Vidinha Juntos. Todos os direitos reservados.
+      <footer className="w-full mt-auto py-6 bg-pink-400 bg-opacity-80 text-center text-gray-100 text-sm">
+        © 2025  LifeSync. Todos os direitos reservados.
       </footer>
       <Toaster />
     </div>

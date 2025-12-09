@@ -3,388 +3,306 @@ import { doc, setDoc, getDoc, onSnapshot, collection, getDocs } from 'firebase/f
 import { toast } from 'sonner';
 import { db } from '@/lib/firebase';
 
-export const useFirebaseData = () => {
-  // Função para gerar instâncias recorrentes de tarefas para uma data
+export const useFirebaseData = (uid) => {
+  // Helper para obter a chave da data de uma tarefa (compatível com dados antigos)
+  const getTaskDateKey = useCallback((task) => {
+    if (task.dateKey) return task.dateKey;
+    if (task.createdAt) return new Date(task.createdAt).toDateString();
+    return new Date().toDateString();
+  }, []);
+
+  // Filtra tarefas considerando recorrência e data selecionada
   const getRecurringTasksForDate = useCallback((tasks, dateStr) => {
     const date = new Date(dateStr);
     return tasks.filter(task => {
+      // Tarefa sem recorrência: usa dateKey (ou createdAt como fallback)
       if (!task.frequencia || task.frequencia === '') {
-        // Tarefa única, só aparece se criada na data
-        return new Date(task.createdAt).toDateString() === date.toDateString();
+        return getTaskDateKey(task) === dateStr;
       }
-      const created = new Date(task.createdAt);
+      // Recorrentes: comparam a partir de createdAt
+      const created = new Date(task.createdAt || dateStr);
       if (created > date) return false;
       if (task.frequencia === 'diario') return true;
       if (task.frequencia === 'semanal') return created.getDay() === date.getDay();
       if (task.frequencia === 'mensal') return created.getDate() === date.getDate();
       return false;
     });
-  }, []);
-  const [agendaData, setAgendaData] = useState({
-    larissa: { manha: [], tarde: [], noite: [] },
-    joaovictor: { manha: [], tarde: [], noite: [] }
-  });
-  
-  const [allTasks, setAllTasks] = useState({
-    larissa: { manha: [], tarde: [], noite: [] },
-    joaovictor: { manha: [], tarde: [], noite: [] }
-  });
-  
-  const [financialData, setFinancialData] = useState({
-    entradas: [],
-    gastos: []
-  });
-  
+  }, [getTaskDateKey]);
+
+  const [agendaData, setAgendaData] = useState({ manha: [], tarde: [], noite: [] });
+  const [allTasks, setAllTasks] = useState({ manha: [], tarde: [], noite: [] });
+  const [financialData, setFinancialData] = useState({ entradas: [], gastos: [] });
   const [specialDates, setSpecialDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toDateString());
 
-  // Gerar ID único
-  const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  };
+  const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-  // Salvar tarefas no Firebase
-    const saveTasksToFirebase = async (date = selectedDate, dataParam) => {
-      const dataToSave = dataParam || agendaData;
-    try {
-        await setDoc(doc(db, "agendas", date), {
-          larissa: dataToSave.larissa,
-          joaovictor: dataToSave.joaovictor,
-          updatedAt: new Date()
-        });
-        toast.success('Tarefa salva com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar tarefas:', error);
-      toast.error('Erro ao salvar tarefa');
-      throw error;
-    }
-  };
+  // Chave de deduplicação estável por conteúdo (evita duplicar tarefas idênticas)
+  const taskDedupeKey = useCallback((t, period) => {
+    return [
+      period,
+      (t.text || '').trim().toLowerCase(),
+      t.hora || '',
+      t.frequencia || '',
+      getTaskDateKey(t)
+    ].join('|');
+  }, [getTaskDateKey]);
 
-  // Função para filtrar tarefas por data selecionada
-  const filterTasksByDate = useCallback((allTasksData, dateStr) => {
-    const filtered = {
-      larissa: { manha: [], tarde: [], noite: [] },
-      joaovictor: { manha: [], tarde: [], noite: [] }
+  // Monta o payload de um dia (doc agendas/<dateKey>) a partir do conjunto total de tarefas
+  const buildDayDataFromAll = useCallback((all, dateKey) => {
+    const only = (arr) => (arr || []).filter(t => getTaskDateKey(t) === dateKey);
+    return {
+      manha: only(all.manha),
+      tarde: only(all.tarde),
+      noite: only(all.noite),
+      updatedAt: new Date()
     };
-    
-    ['larissa', 'joaovictor'].forEach(user => {
-      ['manha', 'tarde', 'noite'].forEach(period => {
-        filtered[user][period] = getRecurringTasksForDate(allTasksData[user][period] || [], dateStr);
-      });
-    });
-    
-    return filtered;
-  }, [getRecurringTasksForDate]);
+  }, [getTaskDateKey]);
 
-  // Carregar tarefas do Firebase
+  // Removido: saveTasksToFirebase — a persistência agora sempre filtra por dia usando buildDayDataFromAll
+
+  const filterTasksByDate = useCallback((allTasksData, dateStr) => ({
+    manha: getRecurringTasksForDate(allTasksData.manha || [], dateStr),
+    tarde: getRecurringTasksForDate(allTasksData.tarde || [], dateStr),
+    noite: getRecurringTasksForDate(allTasksData.noite || [], dateStr)
+  }), [getRecurringTasksForDate]);
+
   const loadTasksFromFirebase = async (date = selectedDate) => {
-    // Filtrar as tarefas já carregadas para a data específica
     const filteredTasks = filterTasksByDate(allTasks, date);
     setAgendaData(filteredTasks);
   };
 
-  // Salvar dados financeiros no Firebase
-  const saveFinancialDataToFirebase = async () => {
+  const addTask = async (period, task) => {
+    // Vincula a tarefa ao dia selecionado
+    const newTask = {
+      ...task,
+      id: generateId(),
+      dateKey: selectedDate,
+      // Mantemos createdAt coerente com o dia selecionado para compatibilidade
+      createdAt: new Date(selectedDate).toISOString()
+    };
+    setAllTasks(prev => {
+      const nextAll = { ...prev, [period]: [...prev[period], newTask] };
+      // Persiste somente as tarefas que pertencem ao dia selecionado
+      const dayPayload = buildDayDataFromAll(nextAll, selectedDate);
+      if (uid) setDoc(doc(db, 'users', uid, 'agendas', selectedDate), dayPayload).catch(console.error);
+      // Atualiza visão filtrada
+      setAgendaData(filterTasksByDate(nextAll, selectedDate));
+      return nextAll;
+    });
+  };
+
+  const toggleTask = async (_period, taskId) => {
+    // Descobre em qual data a tarefa está salva
+    let taskDateKey = null;
+    setAllTasks(prev => {
+      // Busca a tarefa no snapshot anterior
+      const found = [...prev.manha, ...prev.tarde, ...prev.noite].find(t => t.id === taskId);
+      taskDateKey = found ? getTaskDateKey(found) : selectedDate;
+      // Atualiza todas as listas (robusto contra mudança de período)
+      const next = {
+        manha: prev.manha.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+        tarde: prev.tarde.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+        noite: prev.noite.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+      };
+      // Persiste somente o dia afetado
+      const dayPayload = buildDayDataFromAll(next, taskDateKey);
+      if (uid) setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload).catch(console.error);
+      return next;
+    });
+
+    // Atualiza visão filtrada da tela
+    setAgendaData(prev => ({
+      manha: prev.manha.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+      tarde: prev.tarde.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+      noite: prev.noite.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t),
+    }));
+  };
+
+  const removeTask = async (_period, taskId) => {
+    // Descobre a data onde a tarefa está salva
+    let taskDateKey = null;
+    setAllTasks(prev => {
+      const found = [...prev.manha, ...prev.tarde, ...prev.noite].find(t => t.id === taskId);
+      taskDateKey = found ? getTaskDateKey(found) : selectedDate;
+      const next = {
+        manha: prev.manha.filter(t => t.id !== taskId),
+        tarde: prev.tarde.filter(t => t.id !== taskId),
+        noite: prev.noite.filter(t => t.id !== taskId),
+      };
+      const dayPayload = buildDayDataFromAll(next, taskDateKey);
+      if (uid) setDoc(doc(db, 'users', uid, 'agendas', taskDateKey), dayPayload).then(() => {
+        toast.success('Tarefa removida');
+      }).catch((err) => {
+        console.error('Erro ao remover tarefa:', err);
+        toast.error('Erro ao remover tarefa');
+      });
+      return next;
+    });
+
+    setAgendaData(prev => ({
+      manha: prev.manha.filter(t => t.id !== taskId),
+      tarde: prev.tarde.filter(t => t.id !== taskId),
+      noite: prev.noite.filter(t => t.id !== taskId),
+    }));
+  };
+
+  const addEntry = async (entryData) => {
+    const newEntry = { ...entryData, id: generateId(), tipo: 'entrada', data: new Date().toISOString() };
+    setFinancialData(prev => {
+      const next = { ...prev, entradas: [...(prev.entradas || []), newEntry] };
+      // Persist using the next snapshot to avoid stale writes
+      saveFinancialDataToFirebase(next).catch(console.error);
+      return next;
+    });
+  };
+
+  const addExpense = async (expenseData) => {
+    const newExpense = { ...expenseData, id: generateId(), tipo: 'gasto', data: new Date().toISOString() };
+    setFinancialData(prev => {
+      const next = { ...prev, gastos: [...(prev.gastos || []), newExpense] };
+      saveFinancialDataToFirebase(next).catch(console.error);
+      return next;
+    });
+  };
+
+  const removeTransaction = async (id, type) => {
+    setFinancialData(prev => {
+      const next = {
+        ...prev,
+        entradas: type === 'entrada' ? (prev.entradas || []).filter(i => i.id !== id) : (prev.entradas || []),
+        gastos: type === 'gasto' ? (prev.gastos || []).filter(i => i.id !== id) : (prev.gastos || [])
+      };
+      saveFinancialDataToFirebase(next).catch(console.error);
+      return next;
+    });
+  };
+
+  const saveFinancialDataToFirebase = async (data) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     try {
-      await setDoc(doc(db, "financas", currentMonth), financialData);
+      const payload = data ?? financialData;
+      if (uid) await setDoc(doc(db, 'users', uid, 'financas', currentMonth), payload);
     } catch (error) {
       console.error('Erro ao salvar finanças:', error);
       throw error;
     }
   };
 
-  // Carregar dados financeiros do Firebase
-  const loadFinancialDataFromFirebase = async () => {
+  const loadFinancialDataFromFirebase = useCallback(async () => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     try {
-      const docSnap = await getDoc(doc(db, "financas", currentMonth));
-      if (docSnap.exists()) {
-        setFinancialData(docSnap.data());
-      } else {
-        setFinancialData({ entradas: [], gastos: [] });
-      }
+      const snap = uid ? await getDoc(doc(db, 'users', uid, 'financas', currentMonth)) : null;
+      setFinancialData(snap.exists() ? snap.data() : { entradas: [], gastos: [] });
     } catch (error) {
       console.error('Erro ao carregar finanças:', error);
     }
-  };
+  }, [uid]);
 
-  // Salvar datas especiais no Firebase
-  const saveSpecialDateToFirebase = async (specialDate) => {
-    try {
-      const docRef = doc(db, "datasEspeciais", "lista");
-      const docSnap = await getDoc(docRef);
-      let lista = [];
-      if (docSnap.exists()) {
-        lista = docSnap.data().datas || [];
-      }
-      lista.push(specialDate);
-      await setDoc(docRef, { datas: lista });
-      setSpecialDates(lista);
-    } catch (error) {
-      console.error('Erro ao salvar data especial:', error);
-      throw error;
+  const clearFinancialData = async () => {
+    if (window.confirm('Tem certeza que deseja limpar todos os dados financeiros do mês atual?')) {
+      const empty = { entradas: [], gastos: [] };
+      setFinancialData(empty);
+      await saveFinancialDataToFirebase(empty);
     }
   };
 
-  // Carregar datas especiais do Firebase
-  const loadSpecialDatesFromFirebase = async () => {
+  const loadSpecialDatesFromFirebase = useCallback(async () => {
     try {
-      const docRef = doc(db, "datasEspeciais", "lista");
-      const docSnap = await getDoc(docRef);
-      let lista = [];
-      if (docSnap.exists()) {
-        lista = docSnap.data().datas || [];
-      }
-      setSpecialDates(lista);
+      const snap = uid ? await getDoc(doc(db, 'users', uid, 'datasEspeciais', 'lista')) : null;
+      setSpecialDates(snap.exists() ? (snap.data().datas || []) : []);
     } catch (error) {
       console.error('Erro ao carregar datas especiais:', error);
     }
-  };
+  }, [uid]);
 
-  // Adicionar tarefa
-  const addTask = async (user, period, task) => {
-    const newTask = {
-      ...task,
-      id: generateId(),
-      createdAt: new Date().toISOString()
-    };
-
-    setAgendaData(prev => {
-      const updated = {
-        ...prev,
-        [user]: {
-          ...prev[user],
-          [period]: [...prev[user][period], newTask]
-        }
-      };
-      saveTasksToFirebase(selectedDate, updated);
-      return updated;
-    });
-  };
-
-  // Alternar status da tarefa
-  const toggleTask = async (user, period, taskId) => {
-    setAgendaData(prev => {
-      const updated = {
-        ...prev,
-        [user]: {
-          ...prev[user],
-          [period]: prev[user][period].map(task => 
-            task.id === taskId 
-              ? { ...task, completed: !task.completed }
-              : task
-          )
-        }
-      };
-      saveTasksToFirebase(selectedDate, updated);
-      return updated;
-    });
-  };
-
-  // Remover tarefa
-  const removeTask = async (user, period, taskId) => {
-    setAgendaData(prev => {
-      const updated = {
-        ...prev,
-        [user]: {
-          ...prev[user],
-          manha: prev[user].manha.filter(task => task.id !== taskId),
-          tarde: prev[user].tarde.filter(task => task.id !== taskId),
-          noite: prev[user].noite.filter(task => task.id !== taskId)
-        }
-      };
-      saveTasksToFirebase(selectedDate, updated);
-      return updated;
-    });
-  };
-
-  // Adicionar entrada financeira
-  const addEntry = async (entryData) => {
-    const newEntry = {
-      ...entryData,
-      id: generateId(),
-      tipo: 'entrada',
-      data: new Date().toISOString()
-    };
-
-    setFinancialData(prev => ({
-      ...prev,
-      entradas: [...prev.entradas, newEntry]
-    }));
-
-    await saveFinancialDataToFirebase();
-  };
-
-  // Adicionar gasto
-  const addExpense = async (expenseData) => {
-    const newExpense = {
-      ...expenseData,
-      id: generateId(),
-      tipo: 'gasto',
-      data: new Date().toISOString()
-    };
-
-    setFinancialData(prev => ({
-      ...prev,
-      gastos: [...prev.gastos, newExpense]
-    }));
-
-    await saveFinancialDataToFirebase();
-  };
-
-  // Remover transação
-  const removeTransaction = async (type, id) => {
-    if (window.confirm('Tem certeza que deseja remover esta transação?')) {
-      if (type === 'entrada') {
-        setFinancialData(prev => ({
-          ...prev,
-          entradas: prev.entradas.filter(item => item.id !== id)
-        }));
-      } else {
-        setFinancialData(prev => ({
-          ...prev,
-          gastos: prev.gastos.filter(item => item.id !== id)
-        }));
-      }
-      await saveFinancialDataToFirebase();
-    }
-  };
-
-  // Limpar dados financeiros do mês
-  const clearFinancialData = async () => {
-    if (window.confirm('Tem certeza que deseja limpar todos os dados financeiros do mês atual?')) {
-      setFinancialData({ entradas: [], gastos: [] });
-      await saveFinancialDataToFirebase();
-    }
-  };
-
-  // Listeners em tempo real
   useEffect(() => {
-    // Listener para toda a coleção agendas
-    const unsubscribeAgenda = onSnapshot(
-      collection(db, "agendas"),
-      (snapshot) => {
-        let allLarissa = { manha: [], tarde: [], noite: [] };
-        let allJoaoVictor = { manha: [], tarde: [], noite: [] };
-        
-        // Coletar todas as tarefas únicas por ID
-        const taskIds = new Set();
-        
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          ['manha', 'tarde', 'noite'].forEach(period => {
-            if (data.larissa?.[period]) {
-              data.larissa[period].forEach(task => {
-                if (!taskIds.has(task.id)) {
-                  taskIds.add(task.id);
-                  allLarissa[period].push(task);
-                }
-              });
-            }
-            if (data.joaovictor?.[period]) {
-              data.joaovictor[period].forEach(task => {
-                if (!taskIds.has(task.id)) {
-                  taskIds.add(task.id);
-                  allJoaoVictor[period].push(task);
-                }
-              });
+    if (!uid) return; // aguarda usuário
+    const unsubscribeAgenda = onSnapshot(collection(db, 'users', uid, 'agendas'), (snapshot) => {
+      const all = { manha: [], tarde: [], noite: [] };
+      const seen = new Set(); // por chave de conteúdo
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const dateKey = docSnap.id;
+        ['manha', 'tarde', 'noite'].forEach(p => {
+          (data[p] || []).forEach(task => {
+            const withKey = task.dateKey ? task : { ...task, dateKey };
+            // Ignora tarefas salvas em um dia diferente do seu dateKey
+            if (getTaskDateKey(withKey) !== dateKey) return;
+            const k = taskDedupeKey(withKey, p);
+            if (!seen.has(k)) {
+              seen.add(k);
+              all[p].push(withKey);
             }
           });
         });
-        
-        // Armazenar todas as tarefas
-        const allTasksData = { larissa: allLarissa, joaovictor: allJoaoVictor };
-        setAllTasks(allTasksData);
-        
-        // Filtrar para o dia selecionado
-        const filteredTasks = filterTasksByDate(allTasksData, selectedDate);
-        setAgendaData(filteredTasks);
-        
-        toast.success('Dados carregados da nuvem!', {
-          duration: 2000
-        });
-      },
-      (error) => {
-        console.error('Erro ao carregar dados:', error);
-        toast.error('Erro ao carregar dados da nuvem');
-      }
-    );
+      });
+      setAllTasks(all);
+      // Não filtramos aqui para evitar capturar selectedDate antigo.
+      toast.success('Dados carregados da nuvem!', { duration: 2000 });
+    }, (error) => {
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar dados da nuvem');
+    });
 
-    // Listener para finanças
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const unsubscribeFinance = onSnapshot(
-      doc(db, "financas", currentMonth),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setFinancialData(docSnap.data());
-        } else {
-          setFinancialData({ entradas: [], gastos: [] });
-        }
-      }
-    );
+    const unsubscribeFinance = onSnapshot(doc(db, 'users', uid, 'financas', currentMonth), (snap) => {
+      setFinancialData(snap.exists() ? snap.data() : { entradas: [], gastos: [] });
+    });
 
-    // Listener para datas especiais
-    const unsubscribeSpecialDates = onSnapshot(
-      doc(db, "datasEspeciais", "lista"),
-      (docSnap) => {
-        let lista = [];
-        if (docSnap.exists()) {
-          lista = docSnap.data().datas || [];
-        }
-        setSpecialDates(lista);
-      }
-    );
+    const unsubscribeSpecialDates = onSnapshot(doc(db, 'users', uid, 'datasEspeciais', 'lista'), (snap) => {
+      setSpecialDates(snap.exists() ? (snap.data().datas || []) : []);
+    });
 
     return () => {
       unsubscribeAgenda();
       unsubscribeFinance();
       unsubscribeSpecialDates();
     };
-  }, [selectedDate, filterTasksByDate]);
+  }, [filterTasksByDate, getTaskDateKey, taskDedupeKey, uid]);
 
-  // Reagir a mudanças na data selecionada
   useEffect(() => {
-    if (Object.keys(allTasks.larissa).length > 0 || Object.keys(allTasks.joaovictor).length > 0) {
-      const filteredTasks = filterTasksByDate(allTasks, selectedDate);
-      setAgendaData(filteredTasks);
-    }
+    setAgendaData(filterTasksByDate(allTasks, selectedDate));
   }, [selectedDate, allTasks, filterTasksByDate]);
 
-  // Carregar dados iniciais
   useEffect(() => {
-    // Buscar todos os documentos da coleção agendas
-    const fetchAllTasks = async () => {
+    if (!uid) return; // aguarda usuário
+    const fetchAll = async () => {
       try {
-        const colRef = collection(db, "agendas");
-        const snapshot = await getDocs(colRef);
-        let allLarissa = { manha: [], tarde: [], noite: [] };
-        let allJoaoVictor = { manha: [], tarde: [], noite: [] };
-        snapshot.forEach(docSnap => {
+        const snap = await getDocs(collection(db, 'users', uid, 'agendas'));
+        const all = { manha: [], tarde: [], noite: [] };
+        const seen = new Set();
+        snap.forEach(docSnap => {
           const data = docSnap.data();
-          ['manha', 'tarde', 'noite'].forEach(period => {
-            if (data.larissa?.[period]) {
-              allLarissa[period] = allLarissa[period].concat(data.larissa[period]);
-            }
-            if (data.joaovictor?.[period]) {
-              allJoaoVictor[period] = allJoaoVictor[period].concat(data.joaovictor[period]);
-            }
+          const dateKey = docSnap.id;
+          ['manha', 'tarde', 'noite'].forEach(p => {
+            (data[p] || []).forEach(task => {
+              const withKey = task.dateKey ? task : { ...task, dateKey };
+              if (getTaskDateKey(withKey) !== dateKey) return;
+              const k = taskDedupeKey(withKey, p);
+              if (!seen.has(k)) {
+                seen.add(k);
+                all[p].push(withKey);
+              }
+            });
           });
         });
-        setAgendaData({ larissa: allLarissa, joaovictor: allJoaoVictor });
+        setAllTasks(all);
+        // A filtragem acontece em outro efeito reagindo a allTasks+selectedDate
       } catch (error) {
         console.error('Erro ao buscar todas as tarefas:', error);
       }
     };
-    fetchAllTasks();
+    fetchAll();
     loadFinancialDataFromFirebase();
     loadSpecialDatesFromFirebase();
-  }, []);
+  }, [filterTasksByDate, getTaskDateKey, taskDedupeKey, uid, loadFinancialDataFromFirebase, loadSpecialDatesFromFirebase]);
 
   return {
     agendaData,
     financialData,
     specialDates,
+    allTasks,
     selectedDate,
     setSelectedDate,
     addTask,
@@ -394,8 +312,6 @@ export const useFirebaseData = () => {
     addExpense,
     removeTransaction,
     clearFinancialData,
-    saveSpecialDateToFirebase,
     loadTasksFromFirebase
   };
 };
-

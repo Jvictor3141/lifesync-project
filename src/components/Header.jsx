@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Menu, LogOut, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
-const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark }) => {
+const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark, selectedDate }) => {
   const { logout } = useAuth();
-  const [currentDate] = useState(new Date());
+  // Exibe a data selecionada no calendário; fallback para hoje
+  const currentDate = selectedDate ? new Date(selectedDate) : new Date();
 
   const diasSemana = [
     'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
@@ -25,11 +26,11 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark }) => {
   const getSectionTitle = () => {
     switch (currentSection) {
       case 'agenda':
-        return 'Nossa Agendinha';
+        return 'Organize suas tarefas';
       case 'financas':
         return 'Controle Financeiro';
       default:
-        return 'Nossa Agendinha';
+        return 'Organize suas tarefas';
     }
   };
 
@@ -47,8 +48,9 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark }) => {
               <Menu className="w-6 h-6 text-white" />
             </Button>
 
-            <h1 className="w-full text-white text-4xl font-medium py-4 text-center">
-              {getSectionTitle()}
+            <h1 className="w-full text-white text-2xl md:text-4xl font-medium py-4 text-center truncate">
+              <span className="font-bold whitespace-nowrap sofadi-one-regular text-3xl md:text-5xl leading-none">LifeSync</span>
+              <span className="hidden md:inline"> - {getSectionTitle()}</span>
             </h1>
 
             <div className="flex items-center gap-2">

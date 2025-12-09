@@ -5,6 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const FinanceSection = ({ 
   financialData, 
@@ -16,15 +27,13 @@ const FinanceSection = ({
   const [entryForm, setEntryForm] = useState({
     valor: '',
     descricao: '',
-    categoria: 'salario',
-    pessoa: 'pessoa1'
+    categoria: 'salario'
   });
 
   const [expenseForm, setExpenseForm] = useState({
     valor: '',
     descricao: '',
-    categoria: 'alimentacao',
-    tipo: 'pessoa1'
+    categoria: 'alimentacao'
   });
 
   const [filterType, setFilterType] = useState('todos');
@@ -47,12 +56,7 @@ const FinanceSection = ({
     outros: { icon: '🔄', label: 'Outros' }
   };
 
-  const personTypes = {
-    pessoa1: 'Larissa',
-    pessoa2: 'João Victor',
-    ambos: 'Ambos',
-    compartilhado: 'Compartilhado'
-  };
+  // Site individual: sem distinção de pessoas
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -63,7 +67,7 @@ const FinanceSection = ({
 
   const handleAddEntry = (e) => {
     e.preventDefault();
-    const valor = parseFloat(entryForm.valor);
+    const valor = parseFloat(String(entryForm.valor).replace(',', '.'));
     
     if (!valor || valor <= 0 || !entryForm.descricao.trim()) {
       alert('Por favor, preencha todos os campos corretamente.');
@@ -79,14 +83,13 @@ const FinanceSection = ({
     setEntryForm({
       valor: '',
       descricao: '',
-      categoria: 'salario',
-      pessoa: 'pessoa1'
+      categoria: 'salario'
     });
   };
 
   const handleAddExpense = (e) => {
     e.preventDefault();
-    const valor = parseFloat(expenseForm.valor);
+    const valor = parseFloat(String(expenseForm.valor).replace(',', '.'));
     
     if (!valor || valor <= 0 || !expenseForm.descricao.trim()) {
       alert('Por favor, preencha todos os campos corretamente.');
@@ -102,8 +105,7 @@ const FinanceSection = ({
     setExpenseForm({
       valor: '',
       descricao: '',
-      categoria: 'alimentacao',
-      tipo: 'pessoa1'
+      categoria: 'alimentacao'
     });
   };
 
@@ -219,16 +221,7 @@ const FinanceSection = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={entryForm.pessoa} onValueChange={(value) => setEntryForm({ ...entryForm, pessoa: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(personTypes).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Site individual: remove seleção de pessoa */}
                 <Button type="submit" className="bg-green-600 hover:bg-green-700 md:col-span-2 lg:col-span-4">
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar Entrada
@@ -275,16 +268,7 @@ const FinanceSection = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={expenseForm.tipo} onValueChange={(value) => setExpenseForm({ ...expenseForm, tipo: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(personTypes).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Site individual: remove seleção de pessoa */}
                 <Button type="submit" className="bg-red-600 hover:bg-red-700 md:col-span-2 lg:col-span-4">
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar Gasto
@@ -298,14 +282,14 @@ const FinanceSection = ({
       {/* Lista de Transações */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <CardTitle className="text-lg font-medium text-gray-800 dark:text-gray-200 flex items-center">
               <span className="text-2xl mr-2">📊</span>
               Transações Recentes
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,7 +301,7 @@ const FinanceSection = ({
               <Button
                 variant="outline"
                 onClick={onClearMonth}
-                className="text-gray-500 hover:text-red-500"
+                className="text-gray-500 hover:text-red-500 w-full sm:w-auto"
               >
                 Limpar Mês
               </Button>
@@ -336,7 +320,6 @@ const FinanceSection = ({
                 const isEntry = transaction.tipo === 'entrada';
                 const categories = isEntry ? entryCategories : expenseCategories;
                 const category = categories[transaction.categoria] || { icon: '🔄', label: 'Outros' };
-                const personText = personTypes[transaction.pessoa] || transaction.pessoa;
                 const dateFormatted = new Date(transaction.data).toLocaleDateString('pt-BR');
 
                 return (
@@ -351,7 +334,7 @@ const FinanceSection = ({
                           {transaction.descricao}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {personText} • {dateFormatted}
+                          {dateFormatted}
                         </div>
                       </div>
                     </div>
@@ -359,15 +342,32 @@ const FinanceSection = ({
                       <div className={`font-bold ${isEntry ? 'text-green-600' : 'text-red-600'}`}>
                         {isEntry ? '+' : '-'} {formatCurrency(transaction.valor)}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveTransaction(transaction.tipo, transaction.id)}
-                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Remover
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Remover
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover transação?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. A transação será excluída.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onRemoveTransaction(transaction.id, transaction.tipo)}>
+                              Remover
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 );

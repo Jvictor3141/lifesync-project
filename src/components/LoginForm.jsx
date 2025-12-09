@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,8 @@ const LoginForm = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const validatePassword = (pwd) => {
     const hasLength = pwd.length >= 8;
@@ -53,37 +56,47 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm border-pink-200">
+    <div className="min-h-screen animated-diagonal flex items-center justify-center p-4 relative">
+      <Card className="w-full max-w-md bg-white/15 backdrop-blur-xl border-white/40 shadow-xl ring-1 ring-white/20 rounded-2xl noise-overlay relative">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-purple-700">
+          <CardTitle className="text-2xl font-bold text-white drop-shadow-sm">
             {isLogin ? 'Entrar na Agenda' : 'Bem Vindo ao LifeSync'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">E-mail:</label>
+              <label className="block text-sm font-medium mb-1 text-white">E-mail:</label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-purple-200"
+                className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Senha:</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-purple-200"
-              />
+              <label className="block text-sm font-medium mb-1 text-white">Senha:</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-black hover:text-black cursor-pointer"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {!isLogin && (
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-white/80 mt-1">
                   A senha deve ter no mínimo 8 caracteres e incluir:
                   <ul className="list-disc ml-4 mt-1">
                     <li className={password.length >= 8 ? 'text-green-500' : 'text-red-500'}>8 caracteres</li>
@@ -98,16 +111,26 @@ const LoginForm = () => {
 
             {!isLogin && (
               <div>
-                <label className="block text-sm font-medium mb-1">Confirmar Senha:</label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="border-purple-200"
-                />
+                <label className="block text-sm font-medium mb-1 text-white">Confirmar Senha:</label>
+                <div className="relative">
+                  <Input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-black hover:text-black cursor-pointer"
+                    onClick={() => setShowConfirm((v) => !v)}
+                  >
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 {confirmPassword && (
-                  <div className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-500' : 'text-red-500'}`}>
+                  <div className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-400' : 'text-red-300'}`}>
                     {password === confirmPassword ? 'Senhas iguais ✓' : 'As senhas devem ser iguais'}
                   </div>
                 )}
@@ -116,13 +139,13 @@ const LoginForm = () => {
 
             {error && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-white">{error}</AlertDescription>
               </Alert>
             )}
 
             <Button 
               type="submit" 
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               disabled={loading}
             >
               {loading ? 'Carregando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
@@ -130,8 +153,7 @@ const LoginForm = () => {
 
             <Button
               type="button"
-              variant="outline"
-              className="w-full border-purple-200 text-purple-700 hover:bg-purple-50"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');

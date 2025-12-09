@@ -2,10 +2,32 @@ import React from 'react';
 
 const LoadingScreen = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <div className="text-white font-medium">Carregando...</div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-400 via-pink-500 to-fuchsia-500 relative overflow-hidden">
+      {/* Animated glow orbs */}
+      <div className="absolute -top-20 -left-20 w-64 h-64 bg-pink-300 opacity-40 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-fuchsia-300 opacity-40 rounded-full blur-3xl animate-pulse"></div>
+
+      <div className="relative z-10 flex flex-col items-center text-center">
+        {/* Logo / Title */}
+        <div className="flex items-end gap-2">
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-lg">
+            LifeSync
+          </h1>
+          <span className="text-xs md:text-sm text-white/90 mb-2 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm">
+            Organize suas tarefas
+          </span>
+        </div>
+
+        {/* Spinner + text */}
+        <div className="mt-6 flex items-center gap-3 text-white/95">
+          <div className="w-6 h-6 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          <span className="text-sm md:text-base font-medium">Carregando seu espaço...</span>
+        </div>
+
+        {/* Tip line */}
+        <p className="mt-3 text-xs md:text-sm text-white/80">
+          Conectando seus dados com carinho ✨
+        </p>
       </div>
     </div>
   );

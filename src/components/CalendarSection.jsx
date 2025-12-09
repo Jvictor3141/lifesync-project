@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -6,98 +6,58 @@ import { Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const CalendarSection = ({ tasks, specialDates = [], onDateClick }) => {
+// Helper for recurrence filtering for a specific date
+const occursOnDate = (task, date) => {
+  // Non recurring uses dateKey (fall back to createdAt)
+  const dateStr = date.toDateString();
+  if (!task.frequencia || task.frequencia === '') {
+    const key = task.dateKey ? task.dateKey : (task.createdAt ? new Date(task.createdAt).toDateString() : dateStr);
+    return key === dateStr;
+  }
+  const created = new Date(task.createdAt || dateStr);
+  if (created > date) return false;
+  if (task.frequencia === 'diario') return true;
+  if (task.frequencia === 'semanal') return created.getDay() === date.getDay();
+  if (task.frequencia === 'mensal') return created.getDate() === date.getDate();
+  return false;
+};
+
+// Build a local YYYY-MM-DD key (avoid timezone drift with toISOString)
+const dateKeyLocal = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
+  // Responsividade: até lg (<1024px) mostramos 2 bolinhas; em telas maiores, 4
+  const [maxDots, setMaxDots] = useState(4);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setMaxDots(mq.matches ? 4 : 2);
+    update();
+    if (mq.addEventListener) {
+      mq.addEventListener('change', update);
+    } else {
+      // Safari antigo
+      mq.addListener(update);
+    }
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);
+      else mq.removeListener(update);
+    };
+  }, []);
 
   useEffect(() => {
-    // Gerar eventos recorrentes apenas para o mês visível
+    // Keep special dates as FullCalendar events (optional)
     const events = [];
-    const { year, month } = currentMonth;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    Object.entries(tasks).forEach(([user, userData]) => {
-  Object.entries(userData).forEach(([, periodTasks]) => {
-        periodTasks.forEach(task => {
-          if (!task.hora) return;
-          const created = new Date(task.createdAt);
-          // Frequência única: só no dia de criação
-          if (!task.frequencia || task.frequencia === '') {
-            if (created.getMonth() === month && created.getFullYear() === year) {
-              events.push({
-                id: `task-${task.id}`,
-                title: `${task.text} (${user})`,
-                date: created.toISOString().slice(0, 10),
-                backgroundColor: task.cor,
-                borderColor: task.cor,
-                textColor: '#fff'
-              });
-            }
-            return;
-          }
-          // Frequência diária: todos os dias a partir da data de criação
-          if (task.frequencia === 'diario') {
-            for (let d = 1; d <= daysInMonth; d++) {
-              const date = new Date(year, month, d);
-              if (created > date) continue;
-              events.push({
-                id: `task-${task.id}-diario-${date.toISOString().slice(0, 10)}`,
-                title: `${task.text} (${user})`,
-                date: date.toISOString().slice(0, 10),
-                backgroundColor: task.cor,
-                borderColor: task.cor,
-                textColor: '#fff'
-              });
-            }
-            return;
-          }
-          // Frequência semanal: mesmo dia da semana a partir da data de criação
-          if (task.frequencia === 'semanal') {
-            const createdDay = created.getDay();
-            for (let d = 1; d <= daysInMonth; d++) {
-              const date = new Date(year, month, d);
-              if (created > date) continue;
-              if (date.getDay() === createdDay) {
-                events.push({
-                  id: `task-${task.id}-semanal-${date.toISOString().slice(0, 10)}`,
-                  title: `${task.text} (${user})`,
-                  date: date.toISOString().slice(0, 10),
-                  backgroundColor: task.cor,
-                  borderColor: task.cor,
-                  textColor: '#fff'
-                });
-              }
-            }
-            return;
-          }
-          // Frequência mensal: mesmo dia do mês a partir da data de criação
-          if (task.frequencia === 'mensal') {
-            const createdDate = created.getDate();
-            for (let d = 1; d <= daysInMonth; d++) {
-              const date = new Date(year, month, d);
-              if (created > date) continue;
-              if (date.getDate() === createdDate) {
-                events.push({
-                  id: `task-${task.id}-mensal-${date.toISOString().slice(0, 10)}`,
-                  title: `${task.text} (${user})`,
-                  date: date.toISOString().slice(0, 10),
-                  backgroundColor: task.cor,
-                  borderColor: task.cor,
-                  textColor: '#fff'
-                });
-              }
-            }
-            return;
-          }
-        });
-      });
-    });
-
-    // Adicionar datas especiais como eventos
     specialDates.forEach(special => {
       events.push({
         id: `special-${special.nome}`,
@@ -108,9 +68,41 @@ const CalendarSection = ({ tasks, specialDates = [], onDateClick }) => {
         textColor: '#fff'
       });
     });
-
     setCalendarEvents(events);
-  }, [tasks, specialDates, currentMonth]);
+  }, [specialDates]);
+
+  // Build a map of dateStr -> array of colors for that day (using allTasks + recurrence)
+  const dayDotsMap = useMemo(() => {
+    const map = new Map();
+    const { year, month } = currentMonth;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Flatten all tasks across periods
+    const flat = [
+      ...(allTasks?.manha || []),
+      ...(allTasks?.tarde || []),
+      ...(allTasks?.noite || [])
+    ];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const dateStr = dateKeyLocal(date);
+      const colors = [];
+      flat.forEach(task => {
+        if (occursOnDate(task, date)) {
+          const cor = task.cor || '#999';
+          colors.push(cor);
+        }
+      });
+      map.set(dateStr, colors);
+    }
+    // Include special dates as a distinct dot color (optional)
+    specialDates.forEach(s => {
+      const ds = dateKeyLocal(new Date(s.data));
+      const arr = map.get(ds) || [];
+      arr.push('#ec4899');
+      map.set(ds, arr);
+    });
+    return map;
+  }, [allTasks, specialDates, currentMonth]);
 
   const handleDateClick = (info) => {
     if (onDateClick) {
@@ -119,12 +111,24 @@ const CalendarSection = ({ tasks, specialDates = [], onDateClick }) => {
   };
 
   // Atualizar mês visível ao navegar no calendário
-  const handleMonthChange = (arg) => {
-    setCurrentMonth({ year: arg.start.getFullYear(), month: arg.start.getMonth() });
+  const handleMonthChange = (info) => {
+    // Use o primeiro dia do mês atual, não o início da grade (que inclui dias do mês anterior)
+    const cm = info.view.currentStart;
+    setCurrentMonth({ year: cm.getFullYear(), month: cm.getMonth() });
   };
 
   return (
     <div className="mb-6">
+      {/* Estilos locais para ajustar espaçamento dos botões do calendário e destacar o dia selecionado */}
+      <style>{`
+        .fc .fc-toolbar-chunk .fc-button + .fc-button { margin-left: 3px; }
+        .fc .fc-toolbar-chunk .fc-button-group { gap: 3px; }
+        .fc .fc-daygrid-day.fc-selected-day,
+        .fc .fc-daygrid-day.fc-selected-day .fc-daygrid-day-frame { background-color: #ffe4ed !important; }
+        .fc .fc-daygrid-day.fc-selected-day .fc-daygrid-day-top { color: #be185d; font-weight: 700; }
+        /* Evitar overflow da linha de bolinhas */
+        .fc .fc-daygrid-day .fc-dots-row { overflow: hidden; white-space: nowrap; max-width: 100%; }
+      `}</style>
       <Button
         variant="ghost"
         onClick={() => setIsVisible(!isVisible)}
@@ -157,12 +161,37 @@ const CalendarSection = ({ tasks, specialDates = [], onDateClick }) => {
                     today: 'Hoje'
                   }}
                   events={calendarEvents}
+                  dayCellContent={(arg) => {
+                    // Render default text (day number) + custom dots row
+                    const dateIso = dateKeyLocal(arg.date);
+                    const colors = dayDotsMap.get(dateIso) || [];
+                    const visible = colors.slice(0, maxDots);
+                    const extra = colors.length - visible.length;
+                    return {
+                      html: `
+                        <div class="fc-daygrid-day-top">
+                          <a class="fc-daygrid-day-number">${arg.dayNumberText}</a>
+                        </div>
+                        <div class="fc-dots-row" style="display:flex; gap:4px; margin-top:4px; align-items:center;">
+                          ${visible.map(c => `<span class="fc-dot" style="width:8px;height:8px;border-radius:9999px;background:${c};display:inline-block;flex:0 0 auto"></span>`).join('')}
+                          ${extra > 0 ? `<span class="fc-dot fc-dot-more" style="width:14px;height:14px;border:2px solid #999;border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#666;flex:0 0 auto">${extra}</span>` : ''}
+                        </div>`
+                    };
+                  }}
                   dateClick={handleDateClick}
                   eventDisplay="block"
                   dayMaxEvents={3}
                   moreLinkText="mais"
                   eventClassNames="cursor-pointer"
-                  dayCellClassNames="hover:bg-pink-50 cursor-pointer transition-colors"
+                  dayCellClassNames={(arg) => {
+                    const cls = ['hover:bg-pink-50','cursor-pointer','transition-colors'];
+                    const sel = selectedDate ? new Date(selectedDate).toDateString() : '';
+                    const thisDate = new Date(arg.date).toDateString();
+                    if (sel && thisDate === sel) {
+                      cls.push('fc-selected-day');
+                    }
+                    return cls;
+                  }}
                   datesSet={handleMonthChange}
                 />
               </CardContent>

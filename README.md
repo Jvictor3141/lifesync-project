@@ -53,18 +53,17 @@ Acesse:
 2. Ative:
    - Authentication (Email/Password)  
    - Firestore Database  
-3. Copie suas credenciais para:  
-   ```js
-   // src/lib/firebase.js
-   export const firebaseConfig = {
-     apiKey: "...",
-     authDomain: "...",
-     projectId: "...",
-     storageBucket: "...",
-     messagingSenderId: "...",
-     appId: "..."
-   };
+3. Crie um arquivo `.env` baseado em `.env.example` com:
+   ```bash
+   VITE_FIREBASE_API_KEY=...
+   VITE_FIREBASE_AUTH_DOMAIN=...
+   VITE_FIREBASE_PROJECT_ID=...
+   VITE_FIREBASE_STORAGE_BUCKET=...
+   VITE_FIREBASE_MESSAGING_SENDER_ID=...
+   VITE_FIREBASE_APP_ID=...
+   VITE_FIREBASE_MEASUREMENT_ID=...
    ```
+   O `src/lib/firebase.js` lê essas variáveis via `import.meta.env`.
 
 ---
 

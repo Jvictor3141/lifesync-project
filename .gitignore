@@ -1,1 +1,57 @@
-node_modules
+# dependências
+node_modules/
+.pnp
+.pnp.js
+
+# build
+dist/
+build/
+out/
+
+# ambiente
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+
+# sistema
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# caches
+.cache/
+.eslintcache
+vite.config.timestamp*
+*.tsbuildinfo
+
+# firebase local emulator
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# paginações e configs do vite
+*.pid
+*.pid.lock
+
+# Coverage (testes)
+coverage/
+
+# backups
+*.bak
+*.tmp
+*.temp

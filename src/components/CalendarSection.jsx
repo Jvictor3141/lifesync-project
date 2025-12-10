@@ -239,7 +239,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-lg font-medium text-pink-500 flex items-center">
                     <span className="text-2xl mr-2">📅</span>
-                    Datas Especiais do Mês
+                    Eventos Importantes
                   </CardTitle>
                   <div className="w-40">
                     <Select value={specialFilter} onValueChange={(v) => setSpecialFilter(v)}>

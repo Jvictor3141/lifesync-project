@@ -2,9 +2,9 @@ import React from 'react';
 
 const LoadingScreen = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-400 via-pink-500 to-fuchsia-500 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#AE34F7] via-[#9B1CDF] to-[#7A14B0] relative overflow-hidden">
       {/* Animated glow orbs */}
-      <div className="absolute -top-20 -left-20 w-64 h-64 bg-pink-300 opacity-40 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#AE34F7]/30 opacity-40 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-fuchsia-300 opacity-40 rounded-full blur-3xl animate-pulse"></div>
 
       <div className="relative z-10 flex flex-col items-center text-center">
@@ -14,7 +14,7 @@ const LoadingScreen = () => {
             LifeSync
           </h1>
           <span className="text-xs md:text-sm text-white/90 mb-2 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm">
-            Organize suas tarefas
+            Sua vida em perfeita harmonia.
           </span>
         </div>
 

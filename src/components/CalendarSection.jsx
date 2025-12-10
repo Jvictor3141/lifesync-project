@@ -152,7 +152,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
       <Button
         variant="ghost"
         onClick={() => setIsVisible(!isVisible)}
-        className="flex items-center gap-2 text-pink-500 font-medium focus:outline-none mb-2 bg-pink-50 hover:bg-pink-100 transition-colors rounded-lg px-3 py-2"
+        className="flex items-center gap-2 text-[#AE34F7] font-medium focus:outline-none mb-2 bg-[#AE34F7]/10 hover:bg-[#AE34F7]/20 transition-colors rounded-lg px-3 py-2"
       >
         <Calendar className="w-5 h-5" />
         <span>{isVisible ? 'Ocultar Calendário' : 'Mostrar Calendário'}</span>
@@ -165,7 +165,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
       `}>
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 min-w-[350px] md:min-w-[500px]">
-            <Card className="bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700">
+            <Card className="bg-white dark:bg-gray-800 border-[#AE34F7]/20 dark:border-gray-700">
               <CardContent className="p-4">
                 <FullCalendar
                   plugins={[dayGridPlugin, interactionPlugin]}
@@ -219,7 +219,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                   moreLinkText="mais"
                   eventClassNames="cursor-pointer"
                   dayCellClassNames={(arg) => {
-                    const cls = ['hover:bg-pink-50','cursor-pointer','transition-colors'];
+                    const cls = ['hover:bg-[#AE34F7]/10','cursor-pointer','transition-colors'];
                     const sel = selectedDate ? new Date(selectedDate).toDateString() : '';
                     const thisDate = new Date(arg.date).toDateString();
                     if (sel && thisDate === sel) {
@@ -234,10 +234,10 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
           </div>
 
           <div className="md:w-96 w-full">
-            <Card className="bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700">
+            <Card className="bg-white dark:bg-gray-800 border-[#AE34F7]/20 dark:border-gray-700">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-lg font-medium text-pink-500 flex items-center">
+                  <CardTitle className="text-lg font-medium text-[#AE34F7] flex items-center">
                     <span className="text-2xl mr-2">📅</span>
                     Eventos Importantes
                   </CardTitle>
@@ -258,7 +258,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                 <div className="flex justify-end mb-3">
                   <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-pink-500 hover:bg-pink-600"><Plus className="w-4 h-4 mr-1" /></Button>
+                      <Button className="bg-[#AE34F7] hover:bg-[#9B1CDF]"><Plus className="w-4 h-4 mr-1" /></Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -309,7 +309,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                           if (onAddSpecialDate) onAddSpecialDate(payload);
                           setModalOpen(false);
                           setFormName(''); setFormDate(''); setFormFreq(''); setOneTime(false); setWithTime(false); setFormTime('');
-                        }} className="bg-pink-500 hover:bg-pink-600">Salvar</Button>
+                        }} className="bg-[#AE34F7] hover:bg-[#9B1CDF]">Salvar</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -323,7 +323,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
                       : specialDates
                     ).map((item) => (
                       <div key={item.id} className="flex items-center gap-2 justify-between">
-                        <span className="w-3 h-3 rounded-full bg-pink-500"></span>
+                        <span className="w-3 h-3 rounded-full bg-[#AE34F7]"></span>
                         <div className="flex-1 flex items-center gap-2">
                           <span className="font-bold">{item.nome}</span>
                           {(() => {

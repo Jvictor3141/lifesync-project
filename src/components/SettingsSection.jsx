@@ -102,7 +102,7 @@ const SettingsSection = ({ user }) => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-medium text-pink-600">Perfil</CardTitle>
+          <CardTitle className="text-lg font-medium text-[#9B1CDF]">Perfil</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
@@ -217,7 +217,7 @@ const SettingsSection = ({ user }) => {
                       >
                         Resetar Perfil
                       </Button>
-                      <Button onClick={async () => { await handleSaveProfile(); setProfileOpen(false); }} className="bg-pink-500 hover:bg-pink-600">Salvar</Button>
+                      <Button onClick={async () => { await handleSaveProfile(); setProfileOpen(false); }} className="bg-[#AE34F7] hover:bg-[#9B1CDF]">Salvar</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -237,7 +237,7 @@ const SettingsSection = ({ user }) => {
           <div className="flex gap-2">
             <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
               <DialogTrigger asChild>
-                <Button disabled={loading} className="bg-pink-500 hover:bg-pink-600">
+                <Button disabled={loading} className="bg-[#AE34F7] hover:bg-[#9B1CDF]">
                   Trocar Senha
                 </Button>
               </DialogTrigger>
@@ -283,7 +283,7 @@ const SettingsSection = ({ user }) => {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setPasswordOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleUpdatePassword} disabled={loading} className="bg-pink-500 hover:bg-pink-600">Salvar nova senha</Button>
+                  <Button onClick={handleUpdatePassword} disabled={loading} className="bg-[#AE34F7] hover:bg-[#9B1CDF]">Salvar nova senha</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

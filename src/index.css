@@ -1,14 +1,27 @@
 /* Animated diagonal gradient using existing purple/pink palette */
 .animated-diagonal {
-	background: linear-gradient(45deg, #a78bfa, #f472b6);
-	background-size: 200% 200%;
-	animation: diagonalMove 10s ease-in-out infinite;
+	/* Return to translated linear gradient so only colors move, not the page */
+	/* Palette smoothed with cyclic stops */
+	background: linear-gradient(135deg,
+	  #B66AE9 0%,
+	  #B66AE9 12%,
+	  #A843E2 25%,
+	  #9F3BD8 37%,
+	  #8C34BE 52%,
+	  #7D2FA8 65%,
+	  #73299D 78%,
+	  #7D2FA8 90%,
+	  #8C34BE 96%,
+	  #B66AE9 100%
+	);
+	background-size: 600% 600%;
+	animation: diagonalScroll 16s linear infinite;
 }
 
-@keyframes diagonalMove {
+@keyframes diagonalScroll {
 	0% { background-position: 0% 0%; }
-	50% { background-position: 100% 100%; }
-	100% { background-position: 0% 0%; }
+	50% { background-position: 100% 50%; }
+	100% { background-position: 0% 100%; }
 }
 
 /* Optional subtle noise overlay for glassmorphism depth */

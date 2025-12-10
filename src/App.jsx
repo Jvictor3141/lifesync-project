@@ -19,7 +19,12 @@ function App() {
   }
 
   if (!user) {
-    return <LoginForm />;
+    return (
+      <>
+        <LoginForm />
+        <Toaster />
+      </>
+    );
   }
 
   // Depois do login, montamos o app principal (isso garante que os listeners do Firestore
@@ -119,7 +124,7 @@ function MainApp({ user }) {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col bg-pink-50 dark:bg-gray-900 font-sans ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen flex flex-col bg-[#AE34F7]/10 dark:bg-gray-900 font-sans ${isDark ? 'dark' : ''}`}>
       <Header
         onMenuToggle={() => setSidebarOpen(true)}
         currentSection={currentSection}
@@ -172,10 +177,9 @@ function MainApp({ user }) {
         )}
       </main>
 
-      <footer className="w-full mt-auto py-6 bg-pink-400 bg-opacity-80 text-center text-gray-100 text-sm">
+      <footer className="w-full mt-auto py-6 bg-[#9B1CDF] bg-opacity-85 text-center text-gray-100 text-sm">
         © 2025  LifeSync. Todos os direitos reservados.
       </footer>
-      <Toaster />
     </div>
   );
 }

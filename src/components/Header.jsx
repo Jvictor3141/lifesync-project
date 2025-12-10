@@ -27,11 +27,11 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark, selectedD
   const getSectionTitle = () => {
     switch (currentSection) {
       case 'agenda':
-        return 'Organize suas tarefas';
+        return ' Organize suas tarefas';
       case 'financas':
-        return 'Controle Financeiro';
+        return ' Controle Financeiro';
       default:
-        return 'Organize suas tarefas';
+        return '';
     }
   };
 
@@ -52,7 +52,7 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark, selectedD
             <div className="flex items-center flex-1 justify-center gap-2 md:gap-4 px-2 md:px-0">
               <img src={logo} alt="LifeSync Logo" className="px-1 h-10 md:h-14" />
               <h1 className="w-50% text-white text-2xl md:text-4xl font-medium py-4 text-center truncate">
-                <span className="hidden md:inline"> - {getSectionTitle()}</span>
+                <span className="hidden md:inline">{getSectionTitle()}</span>
               </h1>
             </div>
             <div className="flex items-center gap-2">

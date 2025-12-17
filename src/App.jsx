@@ -180,6 +180,7 @@ function MainApp({ user }) {
       <footer className="w-full mt-auto py-6 bg-[#9B1CDF] bg-opacity-85 text-center text-gray-100 text-sm">
         © 2025  LifeSync. Todos os direitos reservados.
       </footer>
+      <Toaster />
     </div>
   );
 }

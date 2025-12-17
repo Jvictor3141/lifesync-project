@@ -163,33 +163,44 @@ export const useFirebaseData = (uid) => {
 
   const addEntry = async (entryData) => {
     const newEntry = { ...entryData, id: generateId(), tipo: 'entrada', data: new Date().toISOString() };
-    setFinancialData(prev => {
-      const next = { ...prev, entradas: [...(prev.entradas || []), newEntry] };
-      // Persist using the next snapshot to avoid stale writes
-      saveFinancialDataToFirebase(next).catch(console.error);
-      return next;
-    });
+    const next = { ...financialData, entradas: [...(financialData.entradas || []), newEntry] };
+    setFinancialData(next);
+    try {
+      await saveFinancialDataToFirebase(next);
+      toast.success('Entrada adicionada');
+    } catch (error) {
+      console.error('Erro ao adicionar entrada:', error);
+      toast.error('Erro ao adicionar entrada');
+    }
   };
 
   const addExpense = async (expenseData) => {
     const newExpense = { ...expenseData, id: generateId(), tipo: 'gasto', data: new Date().toISOString() };
-    setFinancialData(prev => {
-      const next = { ...prev, gastos: [...(prev.gastos || []), newExpense] };
-      saveFinancialDataToFirebase(next).catch(console.error);
-      return next;
-    });
+    const next = { ...financialData, gastos: [...(financialData.gastos || []), newExpense] };
+    setFinancialData(next);
+    try {
+      await saveFinancialDataToFirebase(next);
+      toast.success('Gasto adicionado');
+    } catch (error) {
+      console.error('Erro ao adicionar gasto:', error);
+      toast.error('Erro ao adicionar gasto');
+    }
   };
 
   const removeTransaction = async (id, type) => {
-    setFinancialData(prev => {
-      const next = {
-        ...prev,
-        entradas: type === 'entrada' ? (prev.entradas || []).filter(i => i.id !== id) : (prev.entradas || []),
-        gastos: type === 'gasto' ? (prev.gastos || []).filter(i => i.id !== id) : (prev.gastos || [])
-      };
-      saveFinancialDataToFirebase(next).catch(console.error);
-      return next;
-    });
+    const next = {
+      ...financialData,
+      entradas: type === 'entrada' ? (financialData.entradas || []).filter(i => i.id !== id) : (financialData.entradas || []),
+      gastos: type === 'gasto' ? (financialData.gastos || []).filter(i => i.id !== id) : (financialData.gastos || [])
+    };
+    setFinancialData(next);
+    try {
+      await saveFinancialDataToFirebase(next);
+      toast.success('Transação removida');
+    } catch (error) {
+      console.error('Erro ao remover transação:', error);
+      toast.error('Erro ao remover transação');
+    }
   };
 
   const saveFinancialDataToFirebase = async (data) => {
@@ -217,7 +228,13 @@ export const useFirebaseData = (uid) => {
     if (window.confirm('Tem certeza que deseja limpar todos os dados financeiros do mês atual?')) {
       const empty = { entradas: [], gastos: [] };
       setFinancialData(empty);
-      await saveFinancialDataToFirebase(empty);
+      try {
+        await saveFinancialDataToFirebase(empty);
+        toast.success('Dados financeiros do mês limpos');
+      } catch (error) {
+        console.error('Erro ao limpar finanças:', error);
+        toast.error('Erro ao limpar dados financeiros');
+      }
     }
   };
 

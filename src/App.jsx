@@ -48,6 +48,8 @@ function MainApp({ user }) {
     removeTransaction,
     clearFinancialData,
     loadTasksFromFirebase,
+    getFinancialHistoryMonths,
+    getFinancialDataForMonth,
     addSpecialDate,
     removeSpecialDate
   } = useFirebaseData(user?.uid);
@@ -169,6 +171,8 @@ function MainApp({ user }) {
             onAddExpense={handleAddExpense}
             onRemoveTransaction={removeTransaction}
             onClearMonth={clearFinancialData}
+            onListHistoryMonths={getFinancialHistoryMonths}
+            onLoadMonthData={getFinancialDataForMonth}
           />
         )}
 

@@ -23,7 +23,6 @@ const TaskSection = ({
   onAddTask, 
   onToggleTask, 
   onRemoveTask,
-  // userType removido, não utilizado
 }) => {
   const [newTask, setNewTask] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
@@ -141,7 +140,7 @@ const TaskSection = ({
         {title}
       </h3>
 
-      {/* Adicionar Tarefa */}
+      {/* add new task */}
       <div className="flex flex-col md:flex-row gap-2 mb-4 justify-center items-center w-full">
         <Input
           type="text"
@@ -199,7 +198,7 @@ const TaskSection = ({
         </div>
       </div>
 
-      {/* Períodos */}
+      {/* Periods */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         {periods.map((period) => (
           <Card key={period.id} className="bg-white dark:bg-gray-700">

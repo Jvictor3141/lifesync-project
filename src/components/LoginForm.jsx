@@ -100,7 +100,7 @@ const LoginForm = () => {
 
   return (
     <div className="min-h-screen animated-diagonal flex items-center justify-center p-4 relative">
-      <Card className="w-full max-w-md bg-white/15 backdrop-blur-xl border-white/40 shadow-xl ring-1 ring-white/20 rounded-2xl noise-overlay relative">
+      <Card className="w-full max-w-md glassmorphism noise-overlay relative">
         <CardHeader className="text-center">
           <img
             src={logo}

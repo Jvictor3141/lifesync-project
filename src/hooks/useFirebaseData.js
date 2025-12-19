@@ -238,6 +238,37 @@ export const useFirebaseData = (uid) => {
     }
   };
 
+  // Lista meses com histórico financeiro salvo (somente quando há dados)
+  const getFinancialHistoryMonths = useCallback(async () => {
+    if (!uid) return [];
+    try {
+      const snap = await getDocs(collection(db, 'users', uid, 'financas'));
+      const months = [];
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        const hasData = (data.entradas?.length || 0) + (data.gastos?.length || 0) > 0;
+        if (hasData) months.push(docSnap.id);
+      });
+      // Ordena DESC (mais recente primeiro)
+      return months.sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
+    } catch (error) {
+      console.error('Erro ao listar histórico financeiro:', error);
+      return [];
+    }
+  }, [uid]);
+
+  // Busca dados de finanças de um mês específico (YYYY-MM)
+  const getFinancialDataForMonth = useCallback(async (monthKey) => {
+    if (!uid || !monthKey) return { entradas: [], gastos: [] };
+    try {
+      const snap = await getDoc(doc(db, 'users', uid, 'financas', monthKey));
+      return snap.exists() ? (snap.data() || { entradas: [], gastos: [] }) : { entradas: [], gastos: [] };
+    } catch (error) {
+      console.error('Erro ao carregar dados financeiros do mês:', error);
+      return { entradas: [], gastos: [] };
+    }
+  }, [uid]);
+
   const loadSpecialDatesFromFirebase = useCallback(async () => {
     try {
       const snap = uid ? await getDoc(doc(db, 'users', uid, 'datasEspeciais', 'lista')) : null;
@@ -398,6 +429,8 @@ export const useFirebaseData = (uid) => {
     removeTransaction,
     clearFinancialData,
     loadTasksFromFirebase,
+    getFinancialHistoryMonths,
+    getFinancialDataForMonth,
     addSpecialDate,
     removeSpecialDate
   };

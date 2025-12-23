@@ -8,7 +8,7 @@
 }
 
 .fc-toolbar-title {
-  color: #ec4899 !important;
+  color: #9B1CDF !important;
   font-weight: 600;
   font-size: 1.25rem;
 }
@@ -18,18 +18,18 @@
 }
 
 .fc-button-primary {
-  background-color: #f9a8d4 !important;
+  background-color: #e9a8f9 !important;
   border: none !important;
   color: #fff !important;
   border-radius: 0.5rem !important;
 }
 
 .fc-button-primary:not(:disabled):hover {
-  background-color: #ec4899 !important;
+  background-color: #9B1CDF !important;
 }
 
 .fc-daygrid-event {
-  background: #f9a8d4 !important;
+  background: #e9a8f9 !important;
   color: #fff !important;
   border: none !important;
   border-radius: 0.5rem !important;
@@ -38,8 +38,8 @@
 }
 
 .fc-col-header-cell {
-  background: #f9a8d4 !important;
-  color: #ec4899 !important;
+  background: #e9a8f9 !important;
+  color: #9B1CDF !important;
   font-weight: 600;
   font-size: 1rem;
   border: none !important;

@@ -1,27 +1,18 @@
-/* Animated diagonal gradient using existing purple/pink palette */
-.animated-diagonal {
-	/* Return to translated linear gradient so only colors move, not the page */
-	/* Palette smoothed with cyclic stops */
-	background: linear-gradient(135deg,
-	  #B66AE9 0%,
-	  #B66AE9 12%,
-	  #A843E2 25%,
-	  #9F3BD8 37%,
-	  #8C34BE 52%,
-	  #7D2FA8 65%,
-	  #73299D 78%,
-	  #7D2FA8 90%,
-	  #8C34BE 96%,
-	  #B66AE9 100%
-	);
-	background-size: 600% 600%;
-	animation: diagonalScroll 16s linear infinite;
-}
-
-@keyframes diagonalScroll {
-	0% { background-position: 0% 0%; }
-	50% { background-position: 100% 50%; }
-	100% { background-position: 0% 100%; }
+/* Login background: blue→lavender gradient with subtle grid and a star */
+.login-grid-bg {
+	/* Base gradient */
+	background-image:
+		/* grid lines: vertical */
+		repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 64px),
+		/* grid lines: horizontal */
+		repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 64px),
+		/* diagonals */
+		repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 64px),
+		repeating-linear-gradient(-45deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 64px),
+		/* gradient */
+		linear-gradient(180deg, #2c5a86 0%, #5f7ea9 40%, #a892b1 70%, #efd3e5 100%);
+	background-size: auto, auto, auto, auto, auto, cover;
+	background-attachment: fixed;
 }
 
 /* Optional subtle noise overlay for glassmorphism depth */
@@ -61,4 +52,22 @@
 .glass-overlay {
 	backdrop-filter: blur(6px);
 	-webkit-backdrop-filter: blur(6px);
+}
+
+/* inputs config */
+
+.input {
+  border: none;
+  outline: none;
+  border-radius: 15px;
+  padding: 1em;
+  background-color: #ccc;
+  box-shadow: inset 2px 5px 10px rgba(0,0,0,0.3);
+  transition: 300ms ease-in-out;
+}
+
+.input:focus {
+  background-color: white;
+  transform: scale(1.05);
+  box-shadow: 13px 13px 100px #969696;     
 }

@@ -231,7 +231,7 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-4",
+        "flex flex-wrap items-center justify-center gap-2 sm:gap-4 w-full",
         verticalAlign === "top" ? "pb-3" : "pt-3",
         className
       )}>
@@ -243,7 +243,7 @@ function ChartLegendContent({
           <div
             key={item.value}
             className={cn(
-              "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
+              "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 text-xs sm:text-sm"
             )}>
             {itemConfig?.icon && !hideIcon ? (
               <itemConfig.icon />

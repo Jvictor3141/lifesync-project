@@ -70,7 +70,7 @@ const Header = ({ onMenuToggle, currentSection, onThemeToggle, isDark, selectedD
                 className="bg-white text-[#AE34F7] font-bold px-4 py-2 rounded-lg shadow hover:bg-[#AE34F7]/10 transition-colors"
               >
                 <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                
               </Button>
             </div>
           </div>

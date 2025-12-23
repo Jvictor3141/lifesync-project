@@ -20,7 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart, LabelList, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart, LabelList, Cell, PieChart, Pie } from 'recharts';
 
 // Componente principal da área de finanças
 const FinanceSection = ({ 
@@ -55,6 +55,30 @@ const FinanceSection = ({
   const [loadingMonth, setLoadingMonth] = useState(false);
   const [chartView, setChartView] = useState('categoria');
   const isMobile = useIsMobile();
+
+  // Cor "aleatória" determinística por categoria para dar destaque
+  const colorForCategory = (name) => {
+    const str = String(name || "");
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+    const hue = hash % 360; // 0..359
+    const sat = 70; // saturação alta
+    const light = 50; // luminosidade mediana
+    return `hsl(${hue}, ${sat}%, ${light}%)`;
+  };
+
+  // Label dentro de cada fatia exibindo a porcentagem
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    const RADIAN = Math.PI / 180;
+    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + r * Math.cos(-midAngle * RADIAN);
+    const y = cy + r * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>
+        {(percent * 100).toFixed(0)}%
+      </text>
+    );
+  };
 
   // Catálogo de categorias de entrada (com ícone e rótulo)
   const entryCategories = {
@@ -182,6 +206,13 @@ const FinanceSection = ({
     );
   };
 
+  // Configuração de cores/legendas dos gráficos
+  // Dados do gráfico de pizza: gastos por categoria do mês atual
+  const pieDataExpenses = buildChartData(financialData)
+    .filter((r) => (r.gastos || 0) > 0)
+    .map((r) => ({ name: r.categoria, value: r.gastos, fill: colorForCategory(r.categoria) }));
+  const pieLegendConfig = Object.fromEntries(pieDataExpenses.map((e) => [e.name, { label: e.name }]));
+  
   // Configuração de cores/legendas dos gráficos
   const chartConfig = {
     entradas: { label: 'Entradas', color: 'hsl(142, 72%, 35%)' },
@@ -640,69 +671,96 @@ const FinanceSection = ({
           </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer className="w-full h-[300px] sm:h-[360px]" config={{
-            ...chartConfig,
-            saldo: { 
-              label: chartView === 'categoria' ? 'Saldo por categoria' : chartView === 'dia' ? 'Saldo por dia' : 'Saldo por semana',
-              color: 'hsl(246, 72%, 55%)' 
-            }
-          }}>
-            <ComposedChart data={currentChartData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey={chartView === 'categoria' ? 'categoria' : chartView === 'dia' ? 'dia' : 'semana'}
-                interval={0}
-                angle={-35}
-                textAnchor="end"
-                height={60}
-                tick={{ fontSize: 10 }}
-                tickFormatter={formatXAxisLabel}
-              />
-              <YAxis />
-              <ChartTooltip wrapperStyle={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : undefined} content={<ChartTooltipContent formatter={(value, name, item, index, row) => {
-                const isGasto = name === 'gastos' || item?.dataKey === 'gastos';
-                const isSaldo = name === 'saldo' || item?.dataKey === 'saldo';
-                const percent = isGasto && totalGastosMesAtual > 0 
-                  ? ((value / totalGastosMesAtual) * 100) 
-                  : null;
-                const isMax = isGasto && row?.gastos === currentChartData[maxGastoIndex]?.gastos;
-                return (
-                  <div className="flex w-full justify-between items-center gap-2">
-                    <div className="text-muted-foreground">
-                      {isSaldo 
-                        ? `${chartView === 'categoria' ? 'Saldo por categoria:' : chartView === 'dia' ? 'Saldo por dia:' : 'Saldo por semana:'} `
-                        : (name === 'entradas' ? 'Entrada:' : 'Gasto:')}
-                    </div>
-                    <div className="text-foreground font-mono font-medium tabular-nums whitespace-nowrap">
-                      {formatCurrency(value)}
-                      {percent !== null && (
-                        <span className="ml-1 text-muted-foreground whitespace-nowrap">({percent.toFixed(1)}%)</span>
-                      )}
-                      {isMax && (
-                        <span className="ml-2 text-[10px] text-red-600 whitespace-nowrap">Maior gasto do mês</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              }} />} />
-              <Bar dataKey="entradas" fill="var(--color-entradas)">
-                <LabelList position="top" content={renderCurrencyLabel} />
-              </Bar>
-              <Bar dataKey="gastos" fill="var(--color-gastos)">
-                {currentChartData.map((row, idx) => (
-                  <Cell key={`g-${idx}`} 
-                    stroke={idx === maxGastoIndex ? 'rgba(220, 38, 38, 0.9)' : undefined}
-                    strokeWidth={idx === maxGastoIndex ? 2 : 0}
-                    fillOpacity={idx === maxGastoIndex ? 0.9 : 1}
+          <Tabs defaultValue="barras" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="barras">Barras</TabsTrigger>
+              <TabsTrigger value="pizza">Pizza</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="barras">
+              <ChartContainer className="w-full h-[300px] sm:h-[360px]" config={{
+                ...chartConfig,
+                saldo: { 
+                  label: chartView === 'categoria' ? 'Saldo por categoria' : chartView === 'dia' ? 'Saldo por dia' : 'Saldo por semana',
+                  color: 'hsl(246, 72%, 55%)' 
+                }
+              }}>
+                <ComposedChart data={currentChartData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey={chartView === 'categoria' ? 'categoria' : chartView === 'dia' ? 'dia' : 'semana'}
+                    interval={0}
+                    angle={-35}
+                    textAnchor="end"
+                    height={60}
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={formatXAxisLabel}
                   />
-                ))}
-                <LabelList position="top" content={renderCurrencyLabel} />
-              </Bar>
-              {/* Linha de saldo por categoria suavizada */}
-              <Line type="monotone" dataKey="saldo" stroke="var(--color-saldo)" dot={{ r: 2 }} strokeWidth={1.5} />
-              <ChartLegend content={<ChartLegendContent />} />
-            </ComposedChart>
-          </ChartContainer>
+                  <YAxis />
+                  <ChartTooltip wrapperStyle={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : undefined} content={<ChartTooltipContent formatter={(value, name, item, index, row) => {
+                    const isGasto = name === 'gastos' || item?.dataKey === 'gastos';
+                    const isSaldo = name === 'saldo' || item?.dataKey === 'saldo';
+                    const percent = isGasto && totalGastosMesAtual > 0 
+                      ? ((value / totalGastosMesAtual) * 100) 
+                      : null;
+                    const isMax = isGasto && row?.gastos === currentChartData[maxGastoIndex]?.gastos;
+                    return (
+                      <div className="flex w-full justify-between items-center gap-2">
+                        <div className="text-muted-foreground">
+                          {isSaldo 
+                            ? `${chartView === 'categoria' ? 'Saldo por categoria:' : chartView === 'dia' ? 'Saldo por dia:' : 'Saldo por semana:'} `
+                            : (name === 'entradas' ? 'Entrada:' : 'Gasto:')}
+                        </div>
+                        <div className="text-foreground font-mono font-medium tabular-nums whitespace-nowrap">
+                          {formatCurrency(value)}
+                          {percent !== null && (
+                            <span className="ml-1 text-muted-foreground whitespace-nowrap">({percent.toFixed(1)}%)</span>
+                          )}
+                          {isMax && (
+                            <span className="ml-2 text-[10px] text-red-600 whitespace-nowrap">Maior gasto do mês</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }} />} />
+                  <Bar dataKey="entradas" fill="var(--color-entradas)">
+                    <LabelList position="top" content={renderCurrencyLabel} />
+                  </Bar>
+                  <Bar dataKey="gastos" fill="var(--color-gastos)">
+                    {currentChartData.map((row, idx) => (
+                      <Cell key={`g-${idx}`} 
+                        stroke={idx === maxGastoIndex ? 'rgba(220, 38, 38, 0.9)' : undefined}
+                        strokeWidth={idx === maxGastoIndex ? 2 : 0}
+                        fillOpacity={idx === maxGastoIndex ? 0.9 : 1}
+                      />
+                    ))}
+                    <LabelList position="top" content={renderCurrencyLabel} />
+                  </Bar>
+                  <Line type="monotone" dataKey="saldo" stroke="var(--color-saldo)" dot={{ r: 2 }} strokeWidth={1.5} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </ComposedChart>
+              </ChartContainer>
+            </TabsContent>
+
+            <TabsContent value="pizza">
+              <ChartContainer className="w-full h-[300px] sm:h-[360px]" config={pieLegendConfig}>
+                <PieChart>
+                  <ChartTooltip wrapperStyle={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : undefined} content={<ChartTooltipContent nameKey="name" formatter={(value, name) => (
+                    <div className="flex w-full justify-between items-center gap-2">
+                      <div className="text-muted-foreground">Gasto:</div>
+                      <div className="text-foreground font-mono font-medium tabular-nums whitespace-nowrap">{formatCurrency(value)}</div>
+                    </div>
+                  )} />} />
+                  <Pie data={pieDataExpenses} dataKey="value" nameKey="name" labelLine={false} label={renderPieLabel} innerRadius={40} outerRadius={100}>
+                    {pieDataExpenses.map((entry, index) => (
+                      <Cell key={`slice-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                </PieChart>
+              </ChartContainer>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
       {/* Dialog: Histórico financeiro */}

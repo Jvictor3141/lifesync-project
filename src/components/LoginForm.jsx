@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,19 +70,13 @@ const LoginForm = () => {
     setResetError('');
     setResetLoading(true);
     try {
-      const targetEmail = (resetEmail || email).trim();
+      const targetEmail = (resetEmail || email).trim().toLowerCase();
       if (!targetEmail) {
         setResetError('Informe o e-mail da conta');
         setResetLoading(false);
         return;
       }
-      // Verifica se o e-mail já está cadastrado
-      const methods = await fetchSignInMethodsForEmail(auth, targetEmail);
-      if (!methods || methods.length === 0) {
-        toast.error('Este e-mail não está cadastrado.');
-        setResetLoading(false);
-        return;
-      }
+      // Tenta enviar o e-mail de redefinição diretamente; tratamos erros específicos
       await sendPasswordResetEmail(auth, targetEmail);
       // Segurança: fecha modal e limpa credenciais, volta ao estado "login"
       setResetLoading(false);
@@ -93,13 +87,19 @@ const LoginForm = () => {
       setIsLogin(true);
       toast.success('Enviamos um link de recuperação para seu e-mail.');
     } catch (err) {
-      setResetError('Não foi possível enviar o e-mail de recuperação: ' + (err?.message || ''));
+      if (err?.code === 'auth/user-not-found') {
+        setResetError('Este e-mail não está cadastrado.');
+      } else if (err?.code === 'auth/invalid-email') {
+        setResetError('E-mail inválido. Verifique o endereço informado.');
+      } else {
+        setResetError('Não foi possível enviar o e-mail de recuperação: ' + (err?.message || ''));
+      }
       setResetLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen animated-diagonal flex items-center justify-center p-4 relative">
+    <div className="min-h-screen login-grid-bg flex items-center justify-center p-4 relative">
       <Card className="w-full max-w-md glassmorphism noise-overlay relative">
         <CardHeader className="text-center">
           <img
@@ -120,7 +120,7 @@ const LoginForm = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25"
+                className="border-white/50 input bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25"
               />
             </div>
             
@@ -132,7 +132,7 @@ const LoginForm = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
+                  className="border-white/50 input bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
                 />
                 <button
                   type="button"
@@ -140,7 +140,7 @@ const LoginForm = () => {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-black hover:text-black cursor-pointer"
                   onClick={() => setShowPassword((v) => !v)}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
               {!isLogin && (
@@ -166,7 +166,7 @@ const LoginForm = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="border-white/50 bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
+                    className="border-white/50 input bg-white/20 text-white placeholder:text-white/80 focus:bg-white/25 pr-10"
                   />
                   <button
                     type="button"
@@ -174,7 +174,7 @@ const LoginForm = () => {
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-black hover:text-black cursor-pointer"
                     onClick={() => setShowConfirm((v) => !v)}
                   >
-                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
                 {confirmPassword && (
@@ -209,6 +209,7 @@ const LoginForm = () => {
                           onChange={(e) => setResetEmail(e.target.value)}
                           placeholder="seuemail@exemplo.com"
                           required
+                          className="input"
                         />
                       </div>
                       {resetError && (

@@ -145,7 +145,7 @@ const CalendarSection = ({ allTasks, specialDates = [], onDateClick, selectedDat
         .fc .fc-toolbar-chunk .fc-button-group { gap: 3px; }
         .fc .fc-daygrid-day.fc-selected-day,
         .fc .fc-daygrid-day.fc-selected-day .fc-daygrid-day-frame { background-color: #ffe4ed !important; }
-        .fc .fc-daygrid-day.fc-selected-day .fc-daygrid-day-top { color: #be185d; font-weight: 700; }
+        .fc .fc-daygrid-day.fc-selected-day .fc-daygrid-day-top { color: #AE34F7; font-weight: 700; }
         /* Evitar overflow da linha de bolinhas */
         .fc .fc-daygrid-day .fc-dots-row { overflow: hidden; white-space: nowrap; max-width: 100%; }
       `}</style>

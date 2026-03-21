@@ -99,8 +99,16 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen login-grid-bg flex items-center justify-center p-4 relative">
-      <Card className="w-full max-w-md glassmorphism noise-overlay relative">
+
+    <div className="min-h-screen login-grid-bg background flex items-center justify-center p-4 relative">
+      
+        <div className="background-blur">
+          <div className="blur-circle blur-circle-1"></div>
+          <div className="blur-circle blur-circle-2"></div>
+          <div className="blur-circle blur-circle-3"></div>
+        </div>
+      
+      <Card className="w-full max-w-md card-fundo noise-overlay relative">
         <CardHeader className="text-center">
           <img
             src={logo}

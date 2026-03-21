@@ -126,7 +126,12 @@ function MainApp({ user }) {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col bg-[#AE34F7]/10 dark:bg-gray-900 font-sans ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen flex flex-col background font-sans ${isDark ? 'dark' : ''}`}>
+      <div className="background-blur">
+        <div className="blur-circle blur-circle-1"></div>
+        <div className="blur-circle blur-circle-2"></div>
+        <div className="blur-circle blur-circle-3"></div>
+      </div>
       <Header
         onMenuToggle={() => setSidebarOpen(true)}
         currentSection={currentSection}

@@ -22,9 +22,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { auth } from '@/lib/firebase';
 import BackgroundDecor from '@/shared/components/BackgroundDecor';
+import BrandLogo from '@/shared/components/BrandLogo';
 import PasswordChecklist from '@/shared/components/PasswordChecklist';
 import { isStrongPassword } from '@/shared/lib/password';
-import logo from '@/assets/logo-lifesync.png';
 
 const getAuthErrorMessage = (error, isLogin) => {
   const code = error?.code;
@@ -133,11 +133,7 @@ const LoginForm = () => {
           <div className="hidden border-r border-border/70 bg-[var(--planner-sage-soft)] p-10 lg:flex lg:flex-col lg:justify-between">
             <div>
               <p className="planner-kicker">Agenda com calma</p>
-              <img
-                src={logo}
-                alt="LifeSync"
-                className="mt-6 h-14 w-auto drop-shadow-sm"
-              />
+              <BrandLogo className="brand-logo brand-logo-auth mt-6 h-14 w-auto" />
               <h1 className="mt-8 text-4xl font-semibold text-foreground">
                 Planeje rotinas e acompanhe finanças sem ruído visual.
               </h1>
@@ -329,3 +325,5 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+
+

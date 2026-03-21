@@ -59,6 +59,9 @@
   --planner-terracotta-soft: rgba(120, 201, 197, 0.16);
   --planner-amber: #afc8f0;
   --planner-amber-soft: rgba(175, 200, 240, 0.2);
+  --brand-logo-sidebar: #000000;
+  --brand-logo-auth: #000000;
+  --brand-logo-loading: #000000;
   --finance-income: #2fb57c;
   --finance-income-deep: #1f875c;
   --finance-income-soft: rgba(47, 181, 124, 0.14);
@@ -119,6 +122,9 @@
   --planner-terracotta-soft: rgba(124, 210, 205, 0.18);
   --planner-amber: #b2c9ef;
   --planner-amber-soft: rgba(178, 201, 239, 0.2);
+  --brand-logo-sidebar: var(--foreground);
+  --brand-logo-auth: var(--foreground);
+  --brand-logo-loading: var(--foreground);
   --finance-income: #56d8a0;
   --finance-income-deep: #c4f4dd;
   --finance-income-soft: rgba(86, 216, 160, 0.16);
@@ -383,6 +389,24 @@
 
 .planner-highlight {
   color: var(--planner-terracotta);
+}
+
+.brand-logo {
+  display: block;
+  color: #000;
+  flex: none;
+}
+
+.brand-logo-sidebar {
+  color: var(--brand-logo-sidebar);
+}
+
+.brand-logo-auth {
+  color: var(--brand-logo-auth);
+}
+
+.brand-logo-loading {
+  color: var(--brand-logo-loading);
 }
 
 .fc {

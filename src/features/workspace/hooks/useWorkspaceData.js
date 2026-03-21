@@ -78,7 +78,7 @@ export const useWorkspaceData = (uid) => {
     const unsubscribeFinance = repository.watchFinanceMonth(financeMonthKey, (snapshot) => {
       setFinancialData(snapshot.exists() ? snapshot.data() : createEmptyFinanceData());
     }, (error) => {
-      console.error('Erro ao carregar finanÃ§as:', error);
+      console.error('Erro ao carregar finanças:', error);
       toast.error('Erro ao carregar dados financeiros.');
     });
 
@@ -276,8 +276,8 @@ export const useWorkspaceData = (uid) => {
     await persistFinance(
       nextFinancialData,
       previousFinancialData,
-      'TransaÃ§Ã£o removida.',
-      'Erro ao remover transaÃ§Ã£o.',
+      'Transação removida.',
+      'Erro ao remover transação.',
     );
   };
 
@@ -285,7 +285,7 @@ export const useWorkspaceData = (uid) => {
     await persistFinance(
       createEmptyFinanceData(),
       financialData,
-      'Dados financeiros do mÃªs limpos.',
+      'Dados financeiros do mês limpos.',
       'Erro ao limpar dados financeiros.',
     );
   };
@@ -294,7 +294,7 @@ export const useWorkspaceData = (uid) => {
     try {
       return await repository.listFinanceMonths();
     } catch (error) {
-      console.error('Erro ao listar histÃ³rico financeiro:', error);
+      console.error('Erro ao listar histórico financeiro:', error);
       return [];
     }
   };
@@ -303,7 +303,7 @@ export const useWorkspaceData = (uid) => {
     try {
       return await repository.getFinanceMonth(monthKey) || createEmptyFinanceData();
     } catch (error) {
-      console.error('Erro ao carregar dados financeiros do mÃªs:', error);
+      console.error('Erro ao carregar dados financeiros do mês:', error);
       return createEmptyFinanceData();
     }
   };

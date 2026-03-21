@@ -2,7 +2,7 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { APP_SECTIONS } from '@/app/constants/sections';
-import logo from '@/assets/logo-lifesync.png';
+import BrandLogo from '@/shared/components/BrandLogo';
 
 const AppSidebar = ({
   currentSection,
@@ -35,7 +35,7 @@ const AppSidebar = ({
           <div className="mb-8 flex items-start justify-between gap-4">
             <div>
               <p className="planner-kicker">Navegação</p>
-              <img src={logo} alt="LifeSync" className="mt-4 h-12 w-auto md:h-14" />
+              <BrandLogo className="brand-logo brand-logo-sidebar mt-4 h-12 w-auto md:h-14" />
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 Escolha o espaço que você quer revisar agora.
               </p>
@@ -96,3 +96,4 @@ const AppSidebar = ({
 };
 
 export default AppSidebar;
+

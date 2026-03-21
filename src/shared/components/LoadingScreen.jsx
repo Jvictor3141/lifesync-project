@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import BackgroundDecor from '@/shared/components/BackgroundDecor';
+import BrandLogo from '@/shared/components/BrandLogo';
 
 const LoadingScreen = () => {
   return (
@@ -10,9 +11,7 @@ const LoadingScreen = () => {
         <div className="card-fundo noise-overlay relative w-full max-w-xl rounded-[2rem] p-10 text-center">
           <p className="planner-kicker">Preparando seu planner</p>
 
-          <h1 className="mt-6 text-4xl font-semibold text-foreground md:text-5xl">
-            LifeSync
-          </h1>
+          <BrandLogo className="brand-logo brand-logo-loading mx-auto mt-6 h-16 w-auto md:h-[4.5rem]" />
 
           <p className="mt-4 text-base leading-7 text-muted-foreground md:text-lg">
             Sincronizando agenda, rotina e finanças para abrir seu espaço com clareza.
@@ -29,3 +28,4 @@ const LoadingScreen = () => {
 };
 
 export default LoadingScreen;
+

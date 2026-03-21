@@ -1,7 +1,7 @@
 ﻿import { safeDate, toAgendaDateKey } from '@/shared/lib/date';
 
 export const TASK_PERIODS = [
-  { id: 'manha', title: 'ManhÃ£', timeRange: '6h - 12h' },
+  { id: 'manha', title: 'Manhã', timeRange: '6h - 12h' },
   { id: 'tarde', title: 'Tarde', timeRange: '12h - 18h' },
   { id: 'noite', title: 'Noite', timeRange: '18h - 24h' },
 ];
@@ -9,7 +9,7 @@ export const TASK_PERIODS = [
 export const DEFAULT_TASK_COLOR = '#7BAECC';
 
 export const TASK_FREQUENCIES = [
-  { value: 'diario', label: 'DiÃ¡rio' },
+  { value: 'diario', label: 'Diário' },
   { value: 'semanal', label: 'Semanal' },
   { value: 'mensal', label: 'Mensal' },
 ];

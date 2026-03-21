@@ -1,4 +1,4 @@
-import { Toaster as Sonner } from "sonner";
+﻿import { Toaster as Sonner } from "sonner";
 
 const Toaster = ({
   ...props
@@ -9,15 +9,15 @@ const Toaster = ({
       className="toaster group"
       style={{
         zIndex: 9999,
-        "--normal-bg": "rgba(255,255,255,0.45)",
-        "--normal-text": "#111827",
-        "--normal-border": "rgba(255,255,255,0.35)",
-        "--success-bg": "rgba(34,197,94,0.18)",
-        "--success-text": "#065f46",
-        "--error-bg": "rgba(244,63,94,0.18)",
-        "--error-text": "#7f1d1d",
-        "--warning-bg": "rgba(234,179,8,0.18)",
-        "--warning-text": "#78350f",
+        "--normal-bg": "rgba(248,252,255,0.78)",
+        "--normal-text": "#203344",
+        "--normal-border": "rgba(93,124,146,0.18)",
+        "--success-bg": "rgba(120,201,197,0.18)",
+        "--success-text": "#1d5b60",
+        "--error-bg": "rgba(213,140,157,0.18)",
+        "--error-text": "#7b3046",
+        "--warning-bg": "rgba(175,200,240,0.2)",
+        "--warning-text": "#365675",
       }}
       {...props}
     />

@@ -1,19 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useFirebaseData } from '@/hooks/useFirebaseData';
-import LoadingScreen from '@/components/LoadingScreen';
-import LoginForm from '@/components/LoginForm';
-import Header from '@/components/Header';
-import Sidebar from '@/components/Sidebar';
-import TaskSection from '@/components/TaskSection';
-import CalendarSection from '@/components/CalendarSection';
-import FinanceSection from '@/components/FinanceSection';
-import SettingsSection from '@/components/SettingsSection';
+﻿import React, { Suspense, lazy, useState } from 'react';
+import AppShell from '@/app/components/AppShell';
+import { APP_SECTIONS } from '@/app/constants/sections';
+import { useThemePreference } from '@/app/hooks/useThemePreference';
 import { Toaster } from '@/components/ui/sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceData } from '@/features/workspace/hooks/useWorkspaceData';
+import LoadingScreen from '@/shared/components/LoadingScreen';
 import './App.css';
 
+const AgendaScreen = lazy(() => import('@/components/agenda/AgendaScreen'));
+const LoginForm = lazy(() => import('@/components/auth/LoginForm'));
+const FinanceSection = lazy(() => import('@/components/finance/FinanceSection'));
+const SettingsSection = lazy(() => import('@/components/settings/SettingsSection'));
+
+const SectionFallback = () => (
+  <div className="glassmorphism rounded-[1.75rem] border p-8 text-center text-foreground">
+    <p className="planner-kicker">Carregando</p>
+    <div className="mt-4 text-xl font-semibold">Preparando a seção...</div>
+  </div>
+);
+
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -21,23 +30,25 @@ function App() {
   if (!user) {
     return (
       <>
-        <LoginForm />
+        <Suspense fallback={<LoadingScreen />}>
+          <LoginForm />
+        </Suspense>
         <Toaster />
       </>
     );
   }
 
-  // Depois do login, montamos o app principal (isso garante que os listeners do Firestore
-  // iniciem após a autenticação e os dados carreguem imediatamente)
-  return <MainApp user={user} />;
+  return <AuthenticatedApp user={user} onLogout={logout} />;
 }
 
-function MainApp({ user }) {
+function AuthenticatedApp({ onLogout, user }) {
+  const [currentSection, setCurrentSection] = useState(APP_SECTIONS[0].id);
+  const { isDark, toggleTheme } = useThemePreference();
   const {
     agendaData,
+    allTasks,
     financialData,
     specialDates,
-    allTasks,
     selectedDate,
     setSelectedDate,
     addTask,
@@ -47,152 +58,60 @@ function MainApp({ user }) {
     addExpense,
     removeTransaction,
     clearFinancialData,
-    loadTasksFromFirebase,
     getFinancialHistoryMonths,
     getFinancialDataForMonth,
+    deleteFinancialHistoryMonth,
     addSpecialDate,
-    removeSpecialDate
-  } = useFirebaseData(user?.uid);
+    removeSpecialDate,
+  } = useWorkspaceData(user?.uid);
 
-  const [currentSection, setCurrentSection] = useState('agenda');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
-
-  const handleAddTask = useCallback(async (period, task) => {
-    try {
-      await addTask(period, task);
-    } catch {
-      console.error('Erro ao adicionar tarefa');
-    }
-  }, [addTask]);
-
-  const handleToggleTask = async (period, taskId) => {
-    try {
-      await toggleTask(period, taskId);
-    } catch {
-      alert('Erro ao atualizar tarefa!');
-    }
-  };
-
-  const handleRemoveTask = async (period, taskId) => {
-    try {
-      await removeTask(period, taskId);
-    } catch {
-      alert('Erro ao remover tarefa!');
-    }
-  };
-
-  const handleAddEntry = async (entryData) => {
-    try {
-      await addEntry(entryData);
-    } catch {
-      alert('Erro ao adicionar entrada!');
-    }
-  };
-
-  const handleAddExpense = async (expenseData) => {
-    try {
-      await addExpense(expenseData);
-    } catch {
-      alert('Erro ao adicionar gasto!');
-    }
-  };
-
-  const handleDateClick = async (dateStr) => {
-    const clickedDate = new Date(dateStr + 'T00:00:00');
-    setSelectedDate(clickedDate.toDateString());
-    // Opcional: a filtragem já reage via efeito; manter para força de atualização imediata
-    await loadTasksFromFirebase(clickedDate.toDateString());
+  const contentBySection = {
+    agenda: (
+      <AgendaScreen
+        allTasks={allTasks}
+        onAddSpecialDate={addSpecialDate}
+        onAddTask={addTask}
+        onDateClick={setSelectedDate}
+        onRemoveSpecialDate={removeSpecialDate}
+        onRemoveTask={removeTask}
+        onToggleTask={toggleTask}
+        selectedDate={selectedDate}
+        specialDates={specialDates}
+        tasks={agendaData}
+      />
+    ),
+    financas: (
+      <FinanceSection
+        financialData={financialData}
+        onAddEntry={addEntry}
+        onAddExpense={addExpense}
+        onRemoveTransaction={removeTransaction}
+        onClearMonth={clearFinancialData}
+        onListHistoryMonths={getFinancialHistoryMonths}
+        onLoadMonthData={getFinancialDataForMonth}
+        onDeleteHistoryMonth={deleteFinancialHistoryMonth}
+      />
+    ),
+    configuracoes: <SettingsSection user={user} />,
   };
 
   return (
-    <div className={`min-h-screen flex flex-col background font-sans ${isDark ? 'dark' : ''}`}>
-      <div className="background-blur">
-        <div className="blur-circle blur-circle-1"></div>
-        <div className="blur-circle blur-circle-2"></div>
-        <div className="blur-circle blur-circle-3"></div>
-      </div>
-      <Header
-        onMenuToggle={() => setSidebarOpen(true)}
+    <>
+      <AppShell
         currentSection={currentSection}
-        onThemeToggle={toggleTheme}
         isDark={isDark}
-        selectedDate={selectedDate}
-      />
-
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        currentSection={currentSection}
+        onLogout={onLogout}
         onSectionChange={setCurrentSection}
-      />
-
-      <main className="flex-1 max-w-6xl mx-auto px-4 py-8 w-full">
-        {currentSection === 'agenda' && (
-          <>
-            <CalendarSection
-              allTasks={allTasks}
-              specialDates={specialDates}
-              onDateClick={handleDateClick}
-              selectedDate={selectedDate}
-              onAddSpecialDate={addSpecialDate}
-              onRemoveSpecialDate={removeSpecialDate}
-            />
-
-            <TaskSection
-              title="Minhas Tarefas"
-              tasks={agendaData}
-              onAddTask={handleAddTask}
-              onToggleTask={handleToggleTask}
-              onRemoveTask={handleRemoveTask}
-            />
-          </>
-        )}
-
-        {currentSection === 'financas' && (
-          <FinanceSection
-            financialData={financialData}
-            onAddEntry={handleAddEntry}
-            onAddExpense={handleAddExpense}
-            onRemoveTransaction={removeTransaction}
-            onClearMonth={clearFinancialData}
-            onListHistoryMonths={getFinancialHistoryMonths}
-            onLoadMonthData={getFinancialDataForMonth}
-          />
-        )}
-
-        {currentSection === 'configuracoes' && (
-          <SettingsSection user={user} />
-        )}
-      </main>
-
-      <footer className="w-full mt-auto py-6 bg-[#9B1CDF] bg-opacity-85 text-center text-gray-100 text-sm">
-        © 2025  LifeSync. Todos os direitos reservados.
-      </footer>
+        onThemeToggle={toggleTheme}
+        selectedDate={selectedDate}
+      >
+        <Suspense fallback={<SectionFallback />}>
+          {contentBySection[currentSection]}
+        </Suspense>
+      </AppShell>
       <Toaster />
-    </div>
+    </>
   );
 }
 
 export default App;
-

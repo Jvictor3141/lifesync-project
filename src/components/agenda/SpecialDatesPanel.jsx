@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ import {
   occursInMonth,
   SPECIAL_DATE_FREQUENCIES,
 } from '@/features/agenda/lib/special-date-utils';
+import { MAX_TEXT_LENGTHS } from '@/shared/lib/security';
 
 const INITIAL_FORM = {
   name: '',
@@ -128,6 +129,7 @@ const SpecialDatesPanel = ({
                   <label className="mb-2 block text-sm font-medium">Nome</label>
                   <Input
                     value={formState.name}
+                    maxLength={MAX_TEXT_LENGTHS.specialDateName}
                     onChange={(event) => setFormState((current) => ({
                       ...current,
                       name: event.target.value,

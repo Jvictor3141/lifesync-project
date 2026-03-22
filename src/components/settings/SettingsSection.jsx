@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { sendPasswordResetEmail, updatePassword, updateProfile } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -24,6 +24,14 @@ import {
   writeLocalStorage,
 } from '@/shared/lib/local-storage';
 import { isStrongPassword } from '@/shared/lib/password';
+import {
+  ALLOWED_PROFILE_IMAGE_ACCEPT,
+  MAX_REMOTE_IMAGE_URL_LENGTH,
+  MAX_TEXT_LENGTHS,
+  sanitizeDisplayName,
+  sanitizeProfilePhotoUrl,
+  validateProfileImageFile,
+} from '@/shared/lib/security';
 
 const SettingsSection = ({ user }) => {
   const [photoURL, setPhotoURL] = useState('');
@@ -35,11 +43,13 @@ const SettingsSection = ({ user }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setPhotoURL(readLocalStorage(STORAGE_KEYS.profilePhoto, user?.photoURL || ''));
-    setUsername(user?.displayName || '');
+    const storedPhoto = readLocalStorage(STORAGE_KEYS.profilePhoto, user?.photoURL || '');
+    setPhotoURL(sanitizeProfilePhotoUrl(storedPhoto));
+    setUsername(sanitizeDisplayName(user?.displayName || ''));
   }, [user]);
 
-  const initial = (user?.displayName || username || user?.email || '?')[0]?.toUpperCase();
+  const previewPhotoURL = sanitizeProfilePhotoUrl(photoURL);
+  const initial = (sanitizeDisplayName(username || user?.displayName) || user?.email || '?')[0]?.toUpperCase();
 
   const handleUpdatePassword = async () => {
     if (!isStrongPassword(modalPassword)) {
@@ -81,23 +91,42 @@ const SettingsSection = ({ user }) => {
   };
 
   const handleSaveProfile = async () => {
+    const sanitizedUsername = sanitizeDisplayName(username);
+    const sanitizedPhotoURL = sanitizeProfilePhotoUrl(photoURL);
+
+    if (photoURL && !sanitizedPhotoURL) {
+      toast.error('Use uma URL HTTP/HTTPS válida ou envie PNG, JPG, WEBP ou GIF.');
+      return false;
+    }
+
     try {
       setLoading(true);
 
       await updateProfile(auth.currentUser, {
-        displayName: username || auth.currentUser?.displayName || 'Usuário',
+        displayName: sanitizedUsername || auth.currentUser?.displayName || 'Usuário',
       });
 
-      if (photoURL) {
-        writeLocalStorage(STORAGE_KEYS.profilePhoto, photoURL);
+      if (sanitizedPhotoURL) {
+        const saved = writeLocalStorage(STORAGE_KEYS.profilePhoto, sanitizedPhotoURL);
+
+        if (!saved) {
+          toast.error('O nome foi salvo, mas a foto não pôde ser armazenada neste navegador.');
+          setUsername(sanitizedUsername);
+          setPhotoURL(sanitizedPhotoURL);
+          return false;
+        }
       } else {
         removeLocalStorage(STORAGE_KEYS.profilePhoto);
       }
 
+      setUsername(sanitizedUsername);
+      setPhotoURL(sanitizedPhotoURL);
       toast.success('Perfil atualizado com sucesso.');
+      return true;
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       toast.error('Não foi possível atualizar o perfil.');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -134,8 +163,8 @@ const SettingsSection = ({ user }) => {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="size-[4.5rem] border border-border/70 bg-secondary">
-                {photoURL ? (
-                  <AvatarImage src={photoURL} alt="Foto de perfil" className="object-cover w-full h-full" />
+                {previewPhotoURL ? (
+                  <AvatarImage src={previewPhotoURL} alt="Foto de perfil" className="object-cover w-full h-full" />
                 ) : (
                   <AvatarFallback className="bg-[var(--planner-sage-soft)] text-[var(--planner-sage-deep)] font-semibold">
                     {initial}
@@ -145,7 +174,7 @@ const SettingsSection = ({ user }) => {
 
               <div className="space-y-1">
                 <div className="text-lg font-medium text-foreground">
-                  {user?.displayName || username || 'Usuário'}
+                  {sanitizeDisplayName(username || user?.displayName) || 'Usuário'}
                 </div>
                 <div className="text-sm text-muted-foreground">{user?.email}</div>
               </div>
@@ -170,8 +199,8 @@ const SettingsSection = ({ user }) => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 rounded-[1.25rem] border border-border/70 bg-background/45 p-4">
                     <Avatar className="size-20 border border-border/70 bg-secondary">
-                      {photoURL ? (
-                        <AvatarImage src={photoURL} alt="Prévia da foto" className="object-cover w-full h-full" />
+                      {previewPhotoURL ? (
+                        <AvatarImage src={previewPhotoURL} alt="Prévia da foto" className="object-cover w-full h-full" />
                       ) : (
                         <AvatarFallback className="bg-[var(--planner-sage-soft)] text-[var(--planner-sage-deep)] font-semibold">
                           {initial}
@@ -187,23 +216,33 @@ const SettingsSection = ({ user }) => {
                     type="text"
                     placeholder="Nome de usuário"
                     value={username}
+                    maxLength={MAX_TEXT_LENGTHS.displayName}
                     onChange={(event) => setUsername(event.target.value)}
                   />
 
                   <Input
                     type="file"
-                    accept="image/*"
+                    accept={ALLOWED_PROFILE_IMAGE_ACCEPT}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
+                      const validation = validateProfileImageFile(file);
 
-                      if (!file) {
+                      if (!validation.ok) {
+                        toast.error(validation.error);
                         return;
                       }
 
                       const reader = new FileReader();
                       reader.onload = () => {
                         if (typeof reader.result === 'string') {
-                          setPhotoURL(reader.result);
+                          const nextPhotoURL = sanitizeProfilePhotoUrl(reader.result);
+
+                          if (!nextPhotoURL) {
+                            toast.error('Não foi possível usar esta imagem.');
+                            return;
+                          }
+
+                          setPhotoURL(nextPhotoURL);
                         }
                       };
                       reader.onerror = () => {
@@ -217,6 +256,7 @@ const SettingsSection = ({ user }) => {
                     type="url"
                     placeholder="URL da foto de perfil"
                     value={photoURL}
+                    maxLength={MAX_REMOTE_IMAGE_URL_LENGTH}
                     onChange={(event) => setPhotoURL(event.target.value)}
                   />
                 </div>
@@ -234,8 +274,11 @@ const SettingsSection = ({ user }) => {
                   </Button>
                   <Button
                     onClick={async () => {
-                      await handleSaveProfile();
-                      setProfileOpen(false);
+                      const saved = await handleSaveProfile();
+
+                      if (saved) {
+                        setProfileOpen(false);
+                      }
                     }}
                   >
                     Salvar

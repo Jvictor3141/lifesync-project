@@ -1,4 +1,4 @@
-﻿import {
+import {
   collection,
   deleteDoc,
   doc,
@@ -8,11 +8,13 @@
   setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { isAgendaDateKey, isFinanceMonthKey } from '@/shared/lib/security';
 
 const noop = () => {};
 
 const userCollection = (uid, collectionName) => collection(db, 'users', uid, collectionName);
 const userDocument = (uid, collectionName, documentId) => doc(db, 'users', uid, collectionName, documentId);
+const invalidPathError = (label) => new Error(`Chave invalida para ${label}.`);
 
 export const createUserDataRepository = (uid) => {
   const isReady = Boolean(uid);
@@ -31,10 +33,14 @@ export const createUserDataRepository = (uid) => {
         return Promise.resolve();
       }
 
+      if (!isAgendaDateKey(dateKey)) {
+        return Promise.reject(invalidPathError('agenda'));
+      }
+
       return setDoc(userDocument(uid, 'agendas', dateKey), payload);
     },
     watchFinanceMonth(monthKey, onData, onError = noop) {
-      if (!uid) {
+      if (!uid || !isFinanceMonthKey(monthKey)) {
         return noop;
       }
 
@@ -45,11 +51,19 @@ export const createUserDataRepository = (uid) => {
         return Promise.resolve();
       }
 
+      if (!isFinanceMonthKey(monthKey)) {
+        return Promise.reject(invalidPathError('mes financeiro'));
+      }
+
       return setDoc(userDocument(uid, 'financas', monthKey), payload);
     },
     deleteFinanceMonth(monthKey) {
-      if (!uid || !monthKey) {
+      if (!uid) {
         return Promise.resolve();
+      }
+
+      if (!isFinanceMonthKey(monthKey)) {
+        return Promise.reject(invalidPathError('mes financeiro'));
       }
 
       return deleteDoc(userDocument(uid, 'financas', monthKey));
@@ -63,6 +77,10 @@ export const createUserDataRepository = (uid) => {
       const months = [];
 
       snapshot.forEach((documentSnapshot) => {
+        if (!isFinanceMonthKey(documentSnapshot.id)) {
+          return;
+        }
+
         const data = documentSnapshot.data() || {};
         const totalItems = (data.entradas?.length || 0) + (data.gastos?.length || 0);
 
@@ -74,7 +92,7 @@ export const createUserDataRepository = (uid) => {
       return months.sort((left, right) => (left > right ? -1 : 1));
     },
     async getFinanceMonth(monthKey) {
-      if (!uid || !monthKey) {
+      if (!uid || !isFinanceMonthKey(monthKey)) {
         return null;
       }
 

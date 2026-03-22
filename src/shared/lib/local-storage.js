@@ -3,8 +3,10 @@ export const STORAGE_KEYS = {
   profilePhoto: 'profilePhotoURL',
 };
 
+const canUseStorage = () => typeof window !== 'undefined';
+
 export const readLocalStorage = (key, fallback = '') => {
-  if (typeof window === 'undefined') {
+  if (!canUseStorage()) {
     return fallback;
   }
 
@@ -17,17 +19,27 @@ export const readLocalStorage = (key, fallback = '') => {
 };
 
 export const writeLocalStorage = (key, value) => {
-  if (typeof window === 'undefined') {
-    return;
+  if (!canUseStorage()) {
+    return false;
   }
 
-  window.localStorage.setItem(key, value);
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const removeLocalStorage = (key) => {
-  if (typeof window === 'undefined') {
-    return;
+  if (!canUseStorage()) {
+    return false;
   }
 
-  window.localStorage.removeItem(key);
+  try {
+    window.localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
 };

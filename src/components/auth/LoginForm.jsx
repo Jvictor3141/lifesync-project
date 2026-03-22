@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import {
   createUserWithEmailAndPassword,
@@ -25,6 +25,13 @@ import BackgroundDecor from '@/shared/components/BackgroundDecor';
 import BrandLogo from '@/shared/components/BrandLogo';
 import PasswordChecklist from '@/shared/components/PasswordChecklist';
 import { isStrongPassword } from '@/shared/lib/password';
+import {
+  MAX_TEXT_LENGTHS,
+  isValidEmailAddress,
+  normalizeEmail,
+} from '@/shared/lib/security';
+
+const PASSWORD_RESET_MESSAGE = 'Se o e-mail estiver cadastrado, enviaremos um link de recuperação.';
 
 const getAuthErrorMessage = (error, isLogin) => {
   const code = error?.code;
@@ -64,12 +71,19 @@ const LoginForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!isValidEmailAddress(normalizedEmail)) {
+      setError('Informe um e-mail válido.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } else {
         if (!isStrongPassword(password)) {
           setError('A senha não atende aos requisitos mínimos.');
@@ -81,8 +95,10 @@ const LoginForm = () => {
           return;
         }
 
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       }
+
+      setEmail(normalizedEmail);
     } catch (authError) {
       setError(getAuthErrorMessage(authError, isLogin));
     } finally {
@@ -93,31 +109,34 @@ const LoginForm = () => {
   const handlePasswordReset = async (event) => {
     event?.preventDefault();
     event?.stopPropagation();
+    const nextEmail = normalizeEmail(resetEmail || email);
+
+    if (!isValidEmailAddress(nextEmail)) {
+      setResetError('Informe um e-mail válido.');
+      return;
+    }
+
     setResetError('');
     setResetLoading(true);
 
     try {
-      const nextEmail = (resetEmail || email).trim().toLowerCase();
-
-      if (!nextEmail) {
-        setResetError('Informe o e-mail da conta.');
-        return;
-      }
-
       await sendPasswordResetEmail(auth, nextEmail);
       setResetOpen(false);
       setResetEmail('');
       setPassword('');
       setConfirmPassword('');
       setIsLogin(true);
-      toast.success('Enviamos um link de recuperação para seu e-mail.');
+      toast.success(PASSWORD_RESET_MESSAGE);
     } catch (authError) {
-      if (authError?.code === 'auth/user-not-found') {
-        setResetError('Este e-mail não está cadastrado.');
-      } else if (authError?.code === 'auth/invalid-email') {
-        setResetError('E-mail inválido.');
+      if (authError?.code === 'auth/network-request-failed' || authError?.code === 'auth/too-many-requests') {
+        setResetError('Não foi possível enviar o e-mail agora. Tente novamente em instantes.');
       } else {
-        setResetError('Não foi possível enviar o e-mail de recuperação.');
+        setResetOpen(false);
+        setResetEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setIsLogin(true);
+        toast.success(PASSWORD_RESET_MESSAGE);
       }
     } finally {
       setResetLoading(false);
@@ -169,6 +188,8 @@ const LoginForm = () => {
                   <Input
                     type="email"
                     value={email}
+                    maxLength={MAX_TEXT_LENGTHS.email}
+                    autoComplete="email"
                     onChange={(event) => setEmail(event.target.value)}
                     required
                   />
@@ -180,6 +201,7 @@ const LoginForm = () => {
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
+                      autoComplete={isLogin ? 'current-password' : 'new-password'}
                       onChange={(event) => setPassword(event.target.value)}
                       required
                       className="pr-11"
@@ -206,6 +228,7 @@ const LoginForm = () => {
                       <Input
                         type={showConfirm ? 'text' : 'password'}
                         value={confirmPassword}
+                        autoComplete="new-password"
                         onChange={(event) => setConfirmPassword(event.target.value)}
                         required
                         className="pr-11"
@@ -260,6 +283,8 @@ const LoginForm = () => {
                             <Input
                               type="email"
                               value={resetEmail}
+                              maxLength={MAX_TEXT_LENGTHS.email}
+                              autoComplete="email"
                               onChange={(event) => setResetEmail(event.target.value)}
                               placeholder="seuemail@exemplo.com"
                               required
@@ -325,5 +350,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-
-

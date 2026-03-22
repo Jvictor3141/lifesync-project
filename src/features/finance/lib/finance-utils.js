@@ -1,4 +1,9 @@
-﻿import { currentFinanceMonthKey, formatMonthLabel, sortByDateDesc, toIsoDateKey } from '@/shared/lib/date';
+import { currentFinanceMonthKey, formatMonthLabel, sortByDateDesc, toIsoDateKey } from '@/shared/lib/date';
+import {
+  MAX_TEXT_LENGTHS,
+  normalizeSingleLineText,
+  sanitizeLooseId,
+} from '@/shared/lib/security';
 
 export const ENTRY_CATEGORIES = {
   salario: { icon: '💼', label: 'Salário' },
@@ -43,6 +48,9 @@ export const createEmptyFinanceData = () => ({
   gastos: [],
 });
 
+export const MAX_TRANSACTIONS_PER_TYPE = 400;
+export const MAX_TRANSACTION_AMOUNT = 1000000000;
+
 export const formatCurrency = (value) => (
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -86,6 +94,64 @@ const safeDate = (value, fallback = new Date()) => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
 };
+
+const ENTRY_CATEGORY_SET = new Set(Object.keys(ENTRY_CATEGORIES));
+const EXPENSE_CATEGORY_SET = new Set(Object.keys(EXPENSE_CATEGORIES));
+
+const sanitizeTransactionAmount = (value) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_TRANSACTION_AMOUNT) {
+    return 0;
+  }
+
+  return Math.round(amount * 100) / 100;
+};
+
+const sanitizeTransactionCategory = (category, type) => {
+  const allowedCategories = type === 'entrada' ? ENTRY_CATEGORY_SET : EXPENSE_CATEGORY_SET;
+  const fallbackCategory = type === 'entrada' ? 'salario' : 'outros';
+  return allowedCategories.has(category) ? category : fallbackCategory;
+};
+
+const sanitizeTransactionDate = (value) => safeDate(value).toISOString();
+
+const buildFallbackTransactionId = (item, type) => (
+  [
+    type,
+    sanitizeTransactionDate(item?.data),
+    normalizeSingleLineText(item?.descricao, MAX_TEXT_LENGTHS.transactionDescription),
+  ].filter(Boolean).join('|') || type
+);
+
+const sanitizeTransactionRecord = (item, type) => {
+  const descricao = normalizeSingleLineText(item?.descricao, MAX_TEXT_LENGTHS.transactionDescription);
+  const valor = sanitizeTransactionAmount(item?.valor);
+
+  if (!descricao || !valor) {
+    return null;
+  }
+
+  return {
+    id: sanitizeLooseId(item?.id, buildFallbackTransactionId(item, type)),
+    tipo: type,
+    valor,
+    descricao,
+    categoria: sanitizeTransactionCategory(item?.categoria, type),
+    data: sanitizeTransactionDate(item?.data),
+  };
+};
+
+export const sanitizeFinanceData = (financialData) => ({
+  entradas: (financialData?.entradas || [])
+    .map((entry) => sanitizeTransactionRecord(entry, 'entrada'))
+    .filter(Boolean)
+    .slice(0, MAX_TRANSACTIONS_PER_TYPE),
+  gastos: (financialData?.gastos || [])
+    .map((expense) => sanitizeTransactionRecord(expense, 'gasto'))
+    .filter(Boolean)
+    .slice(0, MAX_TRANSACTIONS_PER_TYPE),
+});
 
 const startOfDay = (value) => {
   const date = safeDate(value);
@@ -604,9 +670,3 @@ export const buildHistoryGroups = (historyMonths) => (
 );
 
 export { currentFinanceMonthKey, formatMonthLabel };
-
-
-
-
-
-

@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAgendaDateKey(value) {
+      return value is string
+        && value.matches('^[A-Z][a-z]{2} [A-Z][a-z]{2} [0-9]{2} [0-9]{4}$');
+    }
+
+    function isMonthKey(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-[0-9]{2}$');
+    }
+
+    function isSpecialDatesDocId(value) {
+      return value == 'lista';
+    }
+
+    // Arrays de mapas continuam sendo validados no cliente. Aqui a regra fecha
+    // ownership, coleções permitidas e limites de volume por documento.
+    function isAgendaDoc(data) {
+      return data.keys().hasOnly(['updatedAt', 'manha', 'tarde', 'noite'])
+        && data.updatedAt is timestamp
+        && data.manha is list && data.manha.size() <= 60
+        && data.tarde is list && data.tarde.size() <= 60
+        && data.noite is list && data.noite.size() <= 60;
+    }
+
+    function isFinanceDoc(data) {
+      return data.keys().hasOnly(['entradas', 'gastos'])
+        && data.entradas is list && data.entradas.size() <= 400
+        && data.gastos is list && data.gastos.size() <= 400;
+    }
+
+    function isSpecialDatesDoc(data) {
+      return data.keys().hasOnly(['datas'])
+        && data.datas is list
+        && data.datas.size() <= 200;
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /agendas/{dateKey} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isAgendaDateKey(dateKey)
+          && isAgendaDoc(request.resource.data);
+        allow delete: if isOwner(userId) && isAgendaDateKey(dateKey);
+      }
+
+      match /financas/{monthKey} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isMonthKey(monthKey)
+          && isFinanceDoc(request.resource.data);
+        allow delete: if isOwner(userId) && isMonthKey(monthKey);
+      }
+
+      match /datasEspeciais/{docId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isSpecialDatesDocId(docId)
+          && isSpecialDatesDoc(request.resource.data);
+        allow delete: if isOwner(userId) && isSpecialDatesDocId(docId);
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

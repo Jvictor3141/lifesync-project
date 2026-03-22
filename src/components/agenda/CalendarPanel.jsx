@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -6,18 +6,106 @@ import { Card, CardContent } from '@/components/ui/card';
 import { occursOnIsoDate } from '@/features/agenda/lib/special-date-utils';
 import { DEFAULT_TASK_COLOR, occursOnAgendaDate } from '@/features/agenda/lib/task-utils';
 import { toAgendaDateKey, toIsoDateKey } from '@/shared/lib/date';
+import { sanitizeHexColor } from '@/shared/lib/security';
 
-const renderDot = (color) => (
-  `<span class="fc-dot" style="width:8px;height:8px;border-radius:9999px;` +
-  `background:${color};display:inline-block;flex:0 0 auto"></span>`
-);
+const applyStyles = (element, styles) => {
+  Object.entries(styles).forEach(([property, value]) => {
+    element.style[property] = value;
+  });
 
-const renderOverflowDot = (extraDots) => (
-  `<span class="fc-dot fc-dot-more" style="width:16px;height:16px;` +
-  `border:1px solid var(--planner-line);background:var(--surface-overlay);border-radius:9999px;display:inline-flex;` +
-  `align-items:center;justify-content:center;font-size:9px;color:var(--planner-ink-soft);` +
-  `flex:0 0 auto">+${extraDots}</span>`
-);
+  return element;
+};
+
+const createElement = (tagName, className, textContent) => {
+  const element = document.createElement(tagName);
+
+  if (className) {
+    element.className = className;
+  }
+
+  if (textContent !== undefined) {
+    element.textContent = textContent;
+  }
+
+  return element;
+};
+
+const createDotNode = (color) => {
+  const dot = createElement('span', 'fc-dot');
+
+  return applyStyles(dot, {
+    width: '8px',
+    height: '8px',
+    borderRadius: '9999px',
+    background: sanitizeHexColor(color, DEFAULT_TASK_COLOR),
+    display: 'inline-block',
+    flex: '0 0 auto',
+  });
+};
+
+const createOverflowDotNode = (extraDots) => {
+  const overflow = createElement('span', 'fc-dot fc-dot-more', `+${extraDots}`);
+
+  return applyStyles(overflow, {
+    width: '16px',
+    height: '16px',
+    border: '1px solid var(--planner-line)',
+    background: 'var(--surface-overlay)',
+    borderRadius: '9999px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '9px',
+    color: 'var(--planner-ink-soft)',
+    flex: '0 0 auto',
+  });
+};
+
+const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleColors }) => {
+  const top = createElement('div', 'fc-daygrid-day-top');
+  const dayNumber = createElement('a', 'fc-daygrid-day-number', dayNumberText);
+  const dotsRow = createElement('div', 'fc-dots-row');
+
+  top.appendChild(dayNumber);
+  applyStyles(dotsRow, {
+    display: 'flex',
+    gap: '4px',
+    marginTop: '4px',
+    alignItems: 'center',
+  });
+
+  visibleColors.forEach((color) => {
+    dotsRow.appendChild(createDotNode(color));
+  });
+
+  if (extraDots > 0) {
+    dotsRow.appendChild(createOverflowDotNode(extraDots));
+  }
+
+  const nodes = [top];
+
+  if (hasSpecialDate) {
+    const starRow = createElement('div', 'fc-star-row');
+    const star = createElement('span', '', '✦');
+
+    applyStyles(starRow, {
+      display: 'flex',
+      justifyContent: 'center',
+      marginTop: '4px',
+    });
+    applyStyles(star, {
+      display: 'inline-block',
+      color: 'var(--planner-terracotta)',
+      fontSize: '12px',
+    });
+
+    starRow.appendChild(star);
+    nodes.push(starRow);
+  }
+
+  nodes.push(dotsRow);
+  return nodes;
+};
 
 const CalendarPanel = ({
   allTasks,
@@ -99,16 +187,15 @@ const CalendarPanel = ({
             const extraDots = colors.length - visibleColors.length;
             const hasSpecialDate = (specialDates || []).some((specialDate) => occursOnIsoDate(specialDate, isoDateKey));
 
+            // FullCalendar accepts domNodes here. Using DOM nodes keeps untrusted
+            // data away from innerHTML and blocks stored XSS through task colors.
             return {
-              html: `
-                <div class="fc-daygrid-day-top">
-                  <a class="fc-daygrid-day-number">${arg.dayNumberText}</a>
-                </div>
-                ${hasSpecialDate ? '<div class="fc-star-row" style="display:flex;justify-content:center;margin-top:4px;"><span style="display:inline-block;color:var(--planner-terracotta);font-size:12px;">✦</span></div>' : ''}
-                <div class="fc-dots-row" style="display:flex;gap:4px;margin-top:4px;align-items:center;">
-                  ${visibleColors.map(renderDot).join('')}
-                  ${extraDots > 0 ? renderOverflowDot(extraDots) : ''}
-                </div>`,
+              domNodes: buildDayCellNodes({
+                dayNumberText: arg.dayNumberText,
+                visibleColors,
+                extraDots,
+                hasSpecialDate,
+              }),
             };
           }}
           dateClick={(info) => onDateClick(toAgendaDateKey(info.date))}

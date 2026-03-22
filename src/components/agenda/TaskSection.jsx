@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
   TASK_FREQUENCIES,
   TASK_PERIODS,
 } from '@/features/agenda/lib/task-utils';
+import { MAX_TEXT_LENGTHS } from '@/shared/lib/security';
 
 const INITIAL_FORM = {
   text: '',
@@ -90,6 +91,7 @@ const TaskSection = ({
             type="text"
             placeholder="Ex.: revisar compromissos e separar prioridades"
             value={formState.text}
+            maxLength={MAX_TEXT_LENGTHS.task}
             onChange={(event) => setFormState((current) => ({
               ...current,
               text: event.target.value,

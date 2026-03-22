@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { createId } from '@/shared/lib/id';
 import { toAgendaDateKey } from '@/shared/lib/date';
@@ -17,10 +17,12 @@ import {
 import {
   createEmptyFinanceData,
   currentFinanceMonthKey,
+  sanitizeFinanceData,
 } from '@/features/finance/lib/finance-utils';
 import {
   normalizeSpecialDate,
   pruneExpiredOneTimeSpecialDates,
+  sanitizeSpecialDatesCollection,
 } from '@/features/agenda/lib/special-date-utils';
 
 const normalizeAgendaSnapshot = (snapshot) => {
@@ -76,14 +78,14 @@ export const useWorkspaceData = (uid) => {
     });
 
     const unsubscribeFinance = repository.watchFinanceMonth(financeMonthKey, (snapshot) => {
-      setFinancialData(snapshot.exists() ? snapshot.data() : createEmptyFinanceData());
+      setFinancialData(snapshot.exists() ? sanitizeFinanceData(snapshot.data()) : createEmptyFinanceData());
     }, (error) => {
       console.error('Erro ao carregar finanças:', error);
       toast.error('Erro ao carregar dados financeiros.');
     });
 
     const unsubscribeSpecialDates = repository.watchSpecialDates(async (snapshot) => {
-      const rawSpecialDates = snapshot.exists() ? (snapshot.data().datas || []) : [];
+      const rawSpecialDates = snapshot.exists() ? sanitizeSpecialDatesCollection(snapshot.data().datas || []) : [];
       const nextSpecialDates = pruneExpiredOneTimeSpecialDates(rawSpecialDates);
       setSpecialDates(nextSpecialDates);
 
@@ -107,10 +109,11 @@ export const useWorkspaceData = (uid) => {
   }, [repository]);
 
   const persistAgenda = async (nextTasks, dateKey, previousTasks, successMessage, errorMessage) => {
-    setAllTasks(nextTasks);
+    const sanitizedTasks = dedupeTasks(nextTasks);
+    setAllTasks(sanitizedTasks);
 
     try {
-      await repository.saveAgendaDay(dateKey, buildAgendaDayPayload(nextTasks, dateKey));
+      await repository.saveAgendaDay(dateKey, buildAgendaDayPayload(sanitizedTasks, dateKey));
 
       if (successMessage) {
         toast.success(successMessage);
@@ -199,10 +202,11 @@ export const useWorkspaceData = (uid) => {
   };
 
   const persistFinance = async (nextFinancialData, previousFinancialData, successMessage, errorMessage) => {
-    setFinancialData(nextFinancialData);
+    const sanitizedFinancialData = sanitizeFinanceData(nextFinancialData);
+    setFinancialData(sanitizedFinancialData);
 
     try {
-      await repository.saveFinanceMonth(currentFinanceMonthKey(), nextFinancialData);
+      await repository.saveFinanceMonth(currentFinanceMonthKey(), sanitizedFinancialData);
 
       if (successMessage) {
         toast.success(successMessage);
@@ -301,7 +305,7 @@ export const useWorkspaceData = (uid) => {
 
   const getFinancialDataForMonth = async (monthKey) => {
     try {
-      return await repository.getFinanceMonth(monthKey) || createEmptyFinanceData();
+      return sanitizeFinanceData(await repository.getFinanceMonth(monthKey) || createEmptyFinanceData());
     } catch (error) {
       console.error('Erro ao carregar dados financeiros do mês:', error);
       return createEmptyFinanceData();
@@ -315,23 +319,30 @@ export const useWorkspaceData = (uid) => {
 
     try {
       await repository.deleteFinanceMonth(monthKey);
-      toast.success('Historico financeiro removido.');
+      toast.success('Histórico financeiro removido.');
     } catch (error) {
-      console.error('Erro ao remover historico financeiro:', error);
-      toast.error('Erro ao remover historico financeiro.');
+      console.error('Erro ao remover histórico financeiro:', error);
+      toast.error('Erro ao remover histórico financeiro.');
       throw error;
     }
   };
 
   const addSpecialDate = async (specialDate) => {
     const previousSpecialDates = specialDates;
-    const nextSpecialDates = [
+    const normalizedSpecialDate = normalizeSpecialDate({
+      ...specialDate,
+      id: createId(),
+    });
+
+    if (!normalizedSpecialDate) {
+      toast.error('Data especial inválida.');
+      return;
+    }
+
+    const nextSpecialDates = sanitizeSpecialDatesCollection([
       ...specialDates,
-      normalizeSpecialDate({
-        ...specialDate,
-        id: createId(),
-      }),
-    ];
+      normalizedSpecialDate,
+    ]);
 
     setSpecialDates(nextSpecialDates);
 
@@ -348,7 +359,9 @@ export const useWorkspaceData = (uid) => {
 
   const removeSpecialDate = async (id) => {
     const previousSpecialDates = specialDates;
-    const nextSpecialDates = specialDates.filter((specialDate) => specialDate.id !== id);
+    const nextSpecialDates = sanitizeSpecialDatesCollection(
+      specialDates.filter((specialDate) => specialDate.id !== id),
+    );
 
     setSpecialDates(nextSpecialDates);
 
@@ -384,5 +397,3 @@ export const useWorkspaceData = (uid) => {
     removeSpecialDate,
   };
 };
-
-

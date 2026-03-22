@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MAX_TEXT_LENGTHS } from '@/shared/lib/security';
 
 const FinanceForms = ({
   entryCategories,
@@ -51,6 +52,7 @@ const FinanceForms = ({
                 type="text"
                 placeholder="Descrição"
                 value={entryForm.descricao}
+                maxLength={MAX_TEXT_LENGTHS.transactionDescription}
                 onChange={(event) => onEntryChange('descricao', event.target.value)}
                 required
               />
@@ -98,6 +100,7 @@ const FinanceForms = ({
                 type="text"
                 placeholder="Descrição"
                 value={expenseForm.descricao}
+                maxLength={MAX_TEXT_LENGTHS.transactionDescription}
                 onChange={(event) => onExpenseChange('descricao', event.target.value)}
                 required
               />

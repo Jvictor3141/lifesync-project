@@ -1,4 +1,11 @@
-import { fromIsoDateKey, toIsoDateKey } from '@/shared/lib/date';
+import { fromIsoDateKey } from '@/shared/lib/date';
+import {
+  MAX_TEXT_LENGTHS,
+  normalizeSingleLineText,
+  sanitizeIsoDateKey,
+  sanitizeLooseId,
+  sanitizeTimeValue,
+} from '@/shared/lib/security';
 
 export const SPECIAL_DATE_FREQUENCIES = [
   { value: 'semanal', label: 'Semanal' },
@@ -6,37 +13,79 @@ export const SPECIAL_DATE_FREQUENCIES = [
   { value: 'anual', label: 'Anual' },
 ];
 
-export const getSpecialDateKey = (specialDate) => {
-  if (typeof specialDate?.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(specialDate.data)) {
-    return specialDate.data;
-  }
+export const MAX_SPECIAL_DATES = 200;
 
-  return toIsoDateKey(specialDate?.data || new Date());
-};
+const SPECIAL_DATE_FREQUENCY_SET = new Set(
+  SPECIAL_DATE_FREQUENCIES.map((frequency) => frequency.value),
+);
+
+export const getSpecialDateKey = (specialDate) => (
+  sanitizeIsoDateKey(specialDate?.data, '')
+);
+
+const buildFallbackSpecialDateId = (specialDate, dateKey) => (
+  [
+    dateKey,
+    normalizeSingleLineText(specialDate?.nome, MAX_TEXT_LENGTHS.specialDateName),
+    sanitizeTimeValue(specialDate?.hora, ''),
+  ].filter(Boolean).join('|') || dateKey
+);
 
 export const normalizeSpecialDate = (specialDate) => {
+  const data = getSpecialDateKey(specialDate);
+  const nome = normalizeSingleLineText(specialDate?.nome, MAX_TEXT_LENGTHS.specialDateName);
+
+  if (!nome || !data) {
+    return null;
+  }
+
   const normalized = {
-    id: specialDate.id,
-    nome: specialDate.nome?.trim() || '',
-    data: getSpecialDateKey(specialDate),
-    frequencia: specialDate.frequencia || '',
+    id: sanitizeLooseId(specialDate?.id, buildFallbackSpecialDateId(specialDate, data)),
+    nome,
+    data,
+    frequencia: SPECIAL_DATE_FREQUENCY_SET.has(specialDate?.frequencia)
+      ? specialDate.frequencia
+      : '',
   };
 
-  if (specialDate.hora) {
-    normalized.hora = specialDate.hora;
+  const hora = sanitizeTimeValue(specialDate?.hora, '');
+
+  if (hora) {
+    normalized.hora = hora;
   }
 
   return normalized;
 };
 
-export const pruneExpiredOneTimeSpecialDates = (specialDates, todayKey = toIsoDateKey()) => (
-  (specialDates || [])
+export const sanitizeSpecialDatesCollection = (specialDates) => {
+  const seen = new Set();
+
+  return (specialDates || [])
     .map((specialDate) => normalizeSpecialDate(specialDate))
+    .filter(Boolean)
+    .filter((specialDate) => {
+      if (seen.has(specialDate.id)) {
+        return false;
+      }
+
+      seen.add(specialDate.id);
+      return true;
+    })
+    .slice(0, MAX_SPECIAL_DATES);
+};
+
+export const pruneExpiredOneTimeSpecialDates = (specialDates, todayKey = sanitizeIsoDateKey(new Date(), '')) => (
+  sanitizeSpecialDatesCollection(specialDates)
     .filter((specialDate) => specialDate.frequencia || specialDate.data >= todayKey)
 );
 
 export const occursOnIsoDate = (specialDate, isoDateKey) => {
   const normalizedSpecialDate = normalizeSpecialDate(specialDate);
+
+  if (!normalizedSpecialDate || !sanitizeIsoDateKey(isoDateKey, '')) {
+    return false;
+  }
+
   const startDate = fromIsoDateKey(normalizedSpecialDate.data);
   const targetDate = fromIsoDateKey(isoDateKey);
 
@@ -68,6 +117,11 @@ export const occursOnIsoDate = (specialDate, isoDateKey) => {
 
 export const occursInMonth = (specialDate, year, month) => {
   const normalizedSpecialDate = normalizeSpecialDate(specialDate);
+
+  if (!normalizedSpecialDate) {
+    return false;
+  }
+
   const startDate = fromIsoDateKey(normalizedSpecialDate.data);
   const monthEnd = new Date(year, month + 1, 0);
 

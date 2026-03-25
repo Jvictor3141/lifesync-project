@@ -36,11 +36,11 @@ const AppShell = ({
         />
 
         <div className="planner-scroll flex-1 overflow-y-auto overflow-x-hidden">
-          <main className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 md:px-6 md:pb-14">
+          <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-6 md:px-6 md:pb-14">
             {children}
           </main>
 
-          <footer className="border-t border-border/70 bg-[rgba(248,252,255,0.7)] px-4 py-5 text-center text-sm text-muted-foreground backdrop-blur-xl dark:bg-[rgba(19,31,42,0.78)]">
+          <footer className="shell-footer mx-4 mb-4 rounded-[1.6rem] px-4 py-5 text-center text-sm text-muted-foreground backdrop-blur-xl md:mx-6 md:mb-6">
             LifeSync · {new Date().getFullYear()} · planejamento, rotina e finanças em um só espaço.
           </footer>
         </div>

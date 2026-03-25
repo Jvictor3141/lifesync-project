@@ -83,9 +83,9 @@ const SpecialDatesPanel = ({
   return (
     <Card className="h-full">
       <CardHeader className="border-b border-border/70 pb-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="planner-kicker">Eventos marcantes</p>
+            <p className="planner-kicker">Eventos</p>
             <CardTitle className="mt-4 text-xl font-medium text-foreground flex items-center gap-2">
               <Star className="w-5 h-5 text-[var(--planner-terracotta)]" />
               Datas especiais

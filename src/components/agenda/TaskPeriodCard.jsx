@@ -58,7 +58,7 @@ const TaskPeriodCard = ({ period, tasks, onRemoveTask, onToggleTask }) => {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-start gap-3 rounded-[1.35rem] border border-border/70 bg-background/55 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex items-center gap-3 rounded-[1.35rem] border border-border/70 bg-background/55 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
                 style={{ boxShadow: `inset 3px 0 0 ${task.cor}` }}
               >
                 <Checkbox

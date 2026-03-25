@@ -1,4 +1,4 @@
-import { safeDate, toAgendaDateKey } from '@/shared/lib/date';
+﻿import { safeDate, toAgendaDateKey } from '@/shared/lib/date';
 import {
   MAX_TEXT_LENGTHS,
   isAgendaDateKey,

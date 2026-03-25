@@ -19,20 +19,19 @@ const AppSidebar = ({
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-[#17140f]/28 backdrop-blur-[4px]"
+          className="fixed inset-0 z-40 bg-[#17140f]/36 backdrop-blur-[6px]"
           onClick={onClose}
         />
       )}
 
       <nav
-        className={`
-          fixed inset-y-0 left-0 z-50 w-[min(88vw,22rem)] border-r border-sidebar-border bg-sidebar shadow-[var(--planner-shadow)] backdrop-blur-xl
+        className={`sidebar-panel fixed inset-y-0 left-0 z-50 w-[min(88vw,22rem)] border-r backdrop-blur-xl
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="flex h-full flex-col p-5">
-          <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="mb-8 flex items-start justify-between gap-4 border-b border-border pb-5">
             <div>
               <p className="planner-kicker">Navegação</p>
               <BrandLogo className="brand-logo brand-logo-sidebar mt-4 h-12 w-auto md:h-14" />
@@ -45,7 +44,7 @@ const AppSidebar = ({
               variant="outline"
               size="icon"
               onClick={onClose}
-              className="rounded-2xl bg-background/70"
+              className="rounded-2xl border-border/90 bg-background/85"
               aria-label="Fechar menu"
             >
               <X className="w-5 h-5" />
@@ -63,14 +62,14 @@ const AppSidebar = ({
                     variant="ghost"
                     className={`h-auto w-full justify-start rounded-[1.4rem] border px-4 py-4 text-left transition-all ${
                       isActive
-                        ? 'border-[var(--planner-sage)] bg-[var(--planner-sage-soft)] text-foreground shadow-sm'
-                        : 'border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-background/50'
+                        ? 'border-border bg-[color:var(--planner-sage-soft)] text-foreground shadow-[var(--surface-shadow-soft)]'
+                        : 'border-border/60 bg-background/55 text-muted-foreground hover:border-border hover:bg-background/80'
                     }`}
                     onClick={() => handleSectionClick(item.id)}
                   >
                     <span className={`mr-3 flex size-10 shrink-0 items-center justify-center rounded-2xl ${
                       isActive
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'bg-secondary text-[var(--planner-sage-deep)]'
                     }`}>
                       <Icon className="w-5 h-5" />
@@ -96,4 +95,3 @@ const AppSidebar = ({
 };
 
 export default AppSidebar;
-

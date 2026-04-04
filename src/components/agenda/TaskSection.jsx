@@ -33,6 +33,8 @@ const INITIAL_FORM = {
   frequency: UNIQUE_TASK_FREQUENCY,
 };
 
+const TASK_FORM_FIELD_CLASSNAME = 'border-border/70 bg-background/80';
+
 const TaskSection = ({
   title,
   tasks,
@@ -96,6 +98,7 @@ const TaskSection = ({
             placeholder="Ex.: revisar compromissos e separar prioridades"
             value={formState.text}
             maxLength={MAX_TEXT_LENGTHS.task}
+            className={TASK_FORM_FIELD_CLASSNAME}
             onChange={(event) => setFormState((current) => ({
               ...current,
               text: event.target.value,
@@ -115,7 +118,7 @@ const TaskSection = ({
                 ...current,
                 time: event.target.value,
               }))}
-              className="cursor-pointer"
+              className={`${TASK_FORM_FIELD_CLASSNAME} cursor-pointer`}
             />
           </div>
           <div>
@@ -129,7 +132,7 @@ const TaskSection = ({
                   frequency: value,
                 }))}
               >
-                <SelectTrigger className="w-auto">
+                <SelectTrigger className={`w-auto ${TASK_FORM_FIELD_CLASSNAME}`}>
                   <SelectValue placeholder="Frequência" />
                 </SelectTrigger>
                 <SelectContent>

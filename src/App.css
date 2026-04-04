@@ -364,7 +364,6 @@
 }
 
 .shell-bar,
-.shell-footer,
 .sidebar-panel {
   border: 1px solid var(--surface-border-strong);
   box-shadow:
@@ -378,6 +377,7 @@
 }
 
 .shell-footer {
+  border-top: 1px solid var(--surface-border-strong);
   background:
     linear-gradient(180deg, rgba(248, 252, 255, 0.84) 0%, rgba(233, 243, 250, 0.94) 100%);
 }

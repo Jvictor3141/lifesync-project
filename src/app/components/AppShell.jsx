@@ -40,7 +40,7 @@ const AppShell = ({
             {children}
           </main>
 
-          <footer className="shell-footer mx-4 mb-4 rounded-[1.6rem] px-4 py-5 text-center text-sm text-muted-foreground backdrop-blur-xl md:mx-6 md:mb-6">
+          <footer className="shell-footer px-4 py-5 text-center text-sm text-muted-foreground backdrop-blur-xl">
             LifeSync · {new Date().getFullYear()} · planejamento, rotina e finanças em um só espaço.
           </footer>
         </div>

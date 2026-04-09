@@ -128,15 +128,20 @@ const LoginForm = () => {
       setIsLogin(true);
       toast.success(PASSWORD_RESET_MESSAGE);
     } catch (authError) {
-      if (authError?.code === 'auth/network-request-failed' || authError?.code === 'auth/too-many-requests') {
+      const code = authError?.code;
+      if (code === 'auth/network-request-failed' || code === 'auth/too-many-requests') {
         setResetError('Não foi possível enviar o e-mail agora. Tente novamente em instantes.');
-      } else {
+      } else if (code === 'auth/invalid-email') {
+        setResetError('Informe um e-mail válido.');
+      } else if (code === 'auth/user-not-found') {
         setResetOpen(false);
         setResetEmail('');
         setPassword('');
         setConfirmPassword('');
         setIsLogin(true);
         toast.success(PASSWORD_RESET_MESSAGE);
+      } else {
+        setResetError('Não foi possível enviar o e-mail de recuperação. Tente novamente.');
       }
     } finally {
       setResetLoading(false);

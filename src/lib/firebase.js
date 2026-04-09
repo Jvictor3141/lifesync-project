@@ -26,10 +26,10 @@ const requiredKeys = [
 
 const missing = requiredKeys.filter((k) => !env[k]);
 if (missing.length) {
-  console.error('[Firebase] Variáveis de ambiente ausentes:', missing.join(', '));
-  console.error('Verifique as variáveis em tempo de build (Vercel → Settings → Environment Variables).');
-  // Lançar um erro claro para evitar falha silenciosa
-  throw new Error('Configuração do Firebase inválida: faltam variáveis de ambiente.');
+  throw new Error(
+    `[Firebase] Variáveis de ambiente ausentes: ${missing.join(', ')}. ` +
+    'Verifique as variáveis em tempo de build (Vercel → Settings → Environment Variables).',
+  );
 }
 
 const app = initializeApp(firebaseConfig);

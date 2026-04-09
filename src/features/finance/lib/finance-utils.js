@@ -1,4 +1,4 @@
-import { currentFinanceMonthKey, formatMonthLabel, sortByDateDesc, toIsoDateKey } from '@/shared/lib/date';
+import { currentFinanceMonthKey, formatMonthLabel, safeDate, sortByDateDesc, toIsoDateKey } from '@/shared/lib/date';
 import {
   MAX_TEXT_LENGTHS,
   normalizeSingleLineText,
@@ -81,19 +81,6 @@ export const formatCategoryLabel = (categoryKey) => (
 const capitalize = (value = '') => value.charAt(0).toUpperCase() + value.slice(1);
 
 const cleanLocaleLabel = (value = '') => capitalize(value.replaceAll('.', ''));
-
-const safeDate = (value, fallback = new Date()) => {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? new Date(fallback) : new Date(value);
-  }
-
-  if (!value) {
-    return new Date(fallback);
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
-};
 
 const ENTRY_CATEGORY_SET = new Set(Object.keys(ENTRY_CATEGORIES));
 const EXPENSE_CATEGORY_SET = new Set(Object.keys(EXPENSE_CATEGORIES));
@@ -542,7 +529,7 @@ const buildFinancialAlerts = ({ comparison, forecast, totals, filterLabel }) => 
       id: 'healthy-flow',
       severity: 'info',
       title: 'Fluxo sob controle',
-      description: 'Nao ha alertas criticos no periodo analisado.',
+      description: 'Não há alertas críticos no período analisado.',
     });
   }
 

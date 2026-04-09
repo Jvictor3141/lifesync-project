@@ -69,8 +69,7 @@ const SettingsSection = ({ user }) => {
       setModalConfirm('');
       setPasswordOpen(false);
       toast.success('Senha atualizada com sucesso.');
-    } catch (error) {
-      console.error('Erro ao atualizar senha:', error);
+    } catch {
       toast.error('Erro ao atualizar senha. Faça login novamente se necessário.');
     } finally {
       setLoading(false);
@@ -82,8 +81,7 @@ const SettingsSection = ({ user }) => {
       setLoading(true);
       await sendPasswordResetEmail(auth, user.email);
       toast.success('E-mail de redefinição de senha enviado.');
-    } catch (error) {
-      console.error('Erro ao enviar e-mail de redefinição:', error);
+    } catch {
       toast.error('Erro ao enviar e-mail de redefinição.');
     } finally {
       setLoading(false);
@@ -123,8 +121,7 @@ const SettingsSection = ({ user }) => {
       setPhotoURL(sanitizedPhotoURL);
       toast.success('Perfil atualizado com sucesso.');
       return true;
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
+    } catch {
       toast.error('Não foi possível atualizar o perfil.');
       return false;
     } finally {
@@ -144,8 +141,7 @@ const SettingsSection = ({ user }) => {
       });
 
       toast.success('Perfil redefinido para o padrão.');
-    } catch (error) {
-      console.error('Erro ao redefinir perfil:', error);
+    } catch {
       toast.error('Não foi possível redefinir o perfil.');
     } finally {
       setLoading(false);

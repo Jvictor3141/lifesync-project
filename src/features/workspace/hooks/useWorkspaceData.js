@@ -72,15 +72,13 @@ export const useWorkspaceData = (uid) => {
 
     const unsubscribeAgenda = repository.watchAgenda((snapshot) => {
       setAllTasks(normalizeAgendaSnapshot(snapshot));
-    }, (error) => {
-      console.error('Erro ao carregar agenda:', error);
+    }, () => {
       toast.error('Erro ao carregar dados da agenda.');
     });
 
     const unsubscribeFinance = repository.watchFinanceMonth(financeMonthKey, (snapshot) => {
       setFinancialData(snapshot.exists() ? sanitizeFinanceData(snapshot.data()) : createEmptyFinanceData());
-    }, (error) => {
-      console.error('Erro ao carregar finanças:', error);
+    }, () => {
       toast.error('Erro ao carregar dados financeiros.');
     });
 
@@ -92,12 +90,11 @@ export const useWorkspaceData = (uid) => {
       if (nextSpecialDates.length !== rawSpecialDates.length) {
         try {
           await repository.saveSpecialDates(nextSpecialDates);
-        } catch (error) {
-          console.error('Erro ao limpar datas especiais expiradas:', error);
+        } catch {
+          // silently skip pruning if save fails; stale one-time dates are benign
         }
       }
-    }, (error) => {
-      console.error('Erro ao carregar datas especiais:', error);
+    }, () => {
       toast.error('Erro ao carregar datas especiais.');
     });
 
@@ -119,7 +116,6 @@ export const useWorkspaceData = (uid) => {
         toast.success(successMessage);
       }
     } catch (error) {
-      console.error(errorMessage, error);
       setAllTasks(previousTasks);
       toast.error(errorMessage);
       throw error;
@@ -212,7 +208,6 @@ export const useWorkspaceData = (uid) => {
         toast.success(successMessage);
       }
     } catch (error) {
-      console.error(errorMessage, error);
       setFinancialData(previousFinancialData);
       toast.error(errorMessage);
       throw error;
@@ -297,8 +292,7 @@ export const useWorkspaceData = (uid) => {
   const getFinancialHistoryMonths = async () => {
     try {
       return await repository.listFinanceMonths();
-    } catch (error) {
-      console.error('Erro ao listar histórico financeiro:', error);
+    } catch {
       return [];
     }
   };
@@ -306,8 +300,7 @@ export const useWorkspaceData = (uid) => {
   const getFinancialDataForMonth = async (monthKey) => {
     try {
       return sanitizeFinanceData(await repository.getFinanceMonth(monthKey) || createEmptyFinanceData());
-    } catch (error) {
-      console.error('Erro ao carregar dados financeiros do mês:', error);
+    } catch {
       return createEmptyFinanceData();
     }
   };
@@ -321,7 +314,6 @@ export const useWorkspaceData = (uid) => {
       await repository.deleteFinanceMonth(monthKey);
       toast.success('Histórico financeiro removido.');
     } catch (error) {
-      console.error('Erro ao remover histórico financeiro:', error);
       toast.error('Erro ao remover histórico financeiro.');
       throw error;
     }
@@ -350,7 +342,6 @@ export const useWorkspaceData = (uid) => {
       await repository.saveSpecialDates(nextSpecialDates);
       toast.success('Data especial adicionada.');
     } catch (error) {
-      console.error('Erro ao adicionar data especial:', error);
       setSpecialDates(previousSpecialDates);
       toast.error('Erro ao adicionar data especial.');
       throw error;
@@ -369,7 +360,6 @@ export const useWorkspaceData = (uid) => {
       await repository.saveSpecialDates(nextSpecialDates);
       toast.success('Data especial removida.');
     } catch (error) {
-      console.error('Erro ao remover data especial:', error);
       setSpecialDates(previousSpecialDates);
       toast.error('Erro ao remover data especial.');
       throw error;

@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy, useState } from 'react';
+﻿import { Suspense, lazy, useState } from 'react';
 import AppShell from '@/app/components/AppShell';
 import { APP_SECTIONS } from '@/app/constants/sections';
 import { useThemePreference } from '@/app/hooks/useThemePreference';

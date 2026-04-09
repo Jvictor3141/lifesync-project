@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { toast } from 'sonner';
 import { auth } from '@/lib/firebase';
 
 export const useAuth = () => {
@@ -18,8 +19,8 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       await signOut(auth);
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+    } catch {
+      toast.error('Não foi possível encerrar a sessão. Tente novamente.');
     }
   };
 

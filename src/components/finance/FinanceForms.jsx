@@ -43,6 +43,8 @@ const FinanceForms = ({
               <Input
                 type="number"
                 step="0.01"
+                min="0.01"
+                max="1000000000"
                 placeholder="Valor (R$)"
                 value={entryForm.valor}
                 onChange={(event) => onEntryChange('valor', event.target.value)}
@@ -91,6 +93,8 @@ const FinanceForms = ({
               <Input
                 type="number"
                 step="0.01"
+                min="0.01"
+                max="1000000000"
                 placeholder="Valor (R$)"
                 value={expenseForm.valor}
                 onChange={(event) => onExpenseChange('valor', event.target.value)}

@@ -1,11 +1,11 @@
 .planner-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(115, 137, 121, 0.4) transparent;
+  scrollbar-color: rgba(99, 102, 241, 0.2) transparent;
 }
 
 .planner-scroll::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 .planner-scroll::-webkit-scrollbar-track {
@@ -13,17 +13,14 @@
 }
 
 .planner-scroll::-webkit-scrollbar-thumb {
-  background: rgba(115, 137, 121, 0.32);
+  background: rgba(99, 102, 241, 0.2);
   border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 
 .planner-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(115, 137, 121, 0.5);
-  background-clip: padding-box;
+  background: rgba(99, 102, 241, 0.4);
 }
 
 .planner-divider {
-  border-color: var(--planner-line);
+  border-color: var(--border);
 }

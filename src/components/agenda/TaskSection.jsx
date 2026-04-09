@@ -88,7 +88,7 @@ const TaskSection = ({
         </div>
       </div>
 
-      <div className="grid gap-8 rounded-[1.6rem] border border-border/70 bg-background/45 max-[320px]:p-2 p-4 lg:grid-cols-[minmax(0,1.6fr)_300px_auto_auto] lg:items-end">
+      <div className="grid gap-6 rounded-[1.6rem] border border-border/70 bg-background/45 max-[320px]:p-2 p-4 lg:grid-cols-[minmax(0,1.6fr)_400px_auto_auto] lg:items-end">
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Tarefa
@@ -106,7 +106,7 @@ const TaskSection = ({
           />
         </div>
 
-        <div className='grid w-auto grid-cols-1 min-[415px]:grid-cols-3 gap-4 md:gap-4'>
+        <div className='grid w-auto grid-cols-3 gap-4 md:gap-4'>
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Horário
@@ -118,7 +118,7 @@ const TaskSection = ({
                 ...current,
                 time: event.target.value,
               }))}
-              className={`${TASK_FORM_FIELD_CLASSNAME} cursor-pointer`}
+              className={`${TASK_FORM_FIELD_CLASSNAME} w-fit cursor-pointer`}
             />
           </div>
           <div>

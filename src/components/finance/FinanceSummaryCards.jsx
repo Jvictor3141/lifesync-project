@@ -32,14 +32,14 @@ const FinanceSummaryCards = ({ formatCurrency, summary }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
       {cards.map((card) => {
         const SummaryIcon = card.icon;
 
         return (
-          <Card key={card.title} className={card.cardClassName}>
+          <Card key={card.title} className="surface-panel bg-card text-card-foreground border border-border flex flex-col px-6 gap-6 rounded-2xl py-6">
             <CardHeader className="pb-2">
-              <CardTitle className={`text-sm font-medium flex items-center gap-2 ${card.textClassName}`}>
+              <CardTitle className={`text-smfont-medium flex items-center gap-1 ${card.textClassName}`}>
                 <span className="flex size-9 items-center justify-center rounded-2xl bg-background/55">
                   <SummaryIcon className="w-4 h-4" />
                 </span>

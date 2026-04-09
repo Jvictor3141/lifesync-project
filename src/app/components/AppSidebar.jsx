@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { APP_SECTIONS } from '@/app/constants/sections';
@@ -19,39 +19,41 @@ const AppSidebar = ({
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-[#17140f]/36 backdrop-blur-[6px]"
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[4px]"
           onClick={onClose}
         />
       )}
 
       <nav
-        className={`sidebar-panel fixed inset-y-0 left-0 z-50 w-[min(88vw,22rem)] border-r backdrop-blur-xl
+        className={`sidebar-panel fixed inset-y-0 left-0 z-50 w-[min(86vw,21rem)] border-r
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="flex h-full flex-col p-5">
-          <div className="mb-8 flex items-start justify-between gap-4 border-b border-border pb-5">
+
+          {/* Cabeçalho do sidebar */}
+          <div className="mb-6 flex items-center justify-between gap-4 border-b border-border pb-5">
             <div>
               <p className="planner-kicker">Navegação</p>
-              <BrandLogo className="brand-logo brand-logo-sidebar mt-4 h-12 w-auto md:h-14" />
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Escolha o espaço que você quer revisar agora.
+              <BrandLogo className="brand-logo brand-logo-sidebar mt-4 h-10 w-auto" />
+              <p className="mt-2.5 text-sm leading-6 text-muted-foreground">
+                Escolha o espaço que você quer revisar.
               </p>
             </div>
 
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               onClick={onClose}
-              className="rounded-2xl border-border/90 bg-background/85"
               aria-label="Fechar menu"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <ul className="space-y-3">
+          {/* Itens de navegação */}
+          <ul className="space-y-1.5">
             {APP_SECTIONS.map((item) => {
               const Icon = item.icon;
               const isActive = currentSection === item.id;
@@ -60,26 +62,26 @@ const AppSidebar = ({
                 <li key={item.id}>
                   <Button
                     variant="ghost"
-                    className={`h-auto w-full justify-start rounded-[1.4rem] border px-4 py-4 text-left transition-all ${
+                    className={`h-auto w-full justify-start rounded-xl border px-3.5 py-3.5 text-left transition-all duration-150 ${
                       isActive
-                        ? 'border-border bg-[color:var(--planner-sage-soft)] text-foreground shadow-[var(--surface-shadow-soft)]'
-                        : 'border-border/60 bg-background/55 text-muted-foreground hover:border-border hover:bg-background/80'
+                        ? 'border-[rgba(99,102,241,0.18)] bg-[var(--planner-sage-soft)] text-foreground'
+                        : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground'
                     }`}
                     onClick={() => handleSectionClick(item.id)}
                   >
-                    <span className={`mr-3 flex size-10 shrink-0 items-center justify-center rounded-2xl ${
+                    <span className={`mr-3 flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-secondary text-[var(--planner-sage-deep)]'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground'
                     }`}>
-                      <Icon className="w-5 h-5" />
+                      <Icon className="h-4 w-4" />
                     </span>
 
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold">
                         {item.label}
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
                         {item.subtitle}
                       </span>
                     </span>

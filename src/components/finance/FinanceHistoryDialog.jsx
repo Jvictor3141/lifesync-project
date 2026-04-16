@@ -177,7 +177,7 @@ const FinanceHistoryDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl p-3 sm:p-4 md:p-6 max-h-[85vh] overflow-y-auto planner-scroll">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl p-3 sm:p-4 md:p-6 max-h-[85vh] overflow-y-auto planner-scroll" hideClose={Boolean(selectedHistoryMonth)}>
         {!selectedHistoryMonth ? (
           <>
             <DialogHeader>

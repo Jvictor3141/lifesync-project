@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetClose, SheetContent } from '@/components/ui/sheet';
 import { APP_SECTIONS } from '@/app/constants/sections';
 import BrandLogo from '@/shared/components/BrandLogo';
 
@@ -16,23 +17,10 @@ const AppSidebar = ({
   };
 
   return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[4px]"
-          onClick={onClose}
-        />
-      )}
-
-      <nav
-        className={`sidebar-panel fixed inset-y-0 left-0 z-50 w-[min(86vw,21rem)] border-r
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-      >
+    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent>
         <div className="flex h-full flex-col p-5">
 
-          {/* Cabeçalho do sidebar */}
           <div className="mb-6 flex items-center justify-between gap-4 border-b border-border pb-5">
             <div>
               <p className="planner-kicker">Navegação</p>
@@ -42,17 +30,13 @@ const AppSidebar = ({
               </p>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              aria-label="Fechar menu"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Fechar menu">
+                <X className="h-5 w-5" />
+              </Button>
+            </SheetClose>
           </div>
 
-          {/* Itens de navegação */}
           <ul className="space-y-1.5">
             {APP_SECTIONS.map((item) => {
               const Icon = item.icon;
@@ -78,12 +62,8 @@ const AppSidebar = ({
                     </span>
 
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold">
-                        {item.label}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        {item.subtitle}
-                      </span>
+                      <span className="block text-sm font-semibold">{item.label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{item.subtitle}</span>
                     </span>
                   </Button>
                 </li>
@@ -91,8 +71,8 @@ const AppSidebar = ({
             })}
           </ul>
         </div>
-      </nav>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 };
 

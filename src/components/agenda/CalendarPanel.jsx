@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { occursOnIsoDate } from '@/features/agenda/lib/special-date-utils';
-import { DEFAULT_TASK_COLOR, occursOnAgendaDate } from '@/features/agenda/lib/task-utils';
+import { DEFAULT_TASK_COLOR, isTaskCompletedOnDate, occursOnAgendaDate } from '@/features/agenda/lib/task-utils';
 import { toAgendaDateKey, toIsoDateKey } from '@/shared/lib/date';
 import { sanitizeHexColor } from '@/shared/lib/security';
 
@@ -30,7 +30,7 @@ const createElement = (tagName, className, textContent) => {
   return element;
 };
 
-const createDotNode = (color) => {
+const createDotNode = (color, completed = false) => {
   const dot = createElement('span', 'fc-dot');
 
   return applyStyles(dot, {
@@ -40,6 +40,8 @@ const createDotNode = (color) => {
     background: sanitizeHexColor(color, DEFAULT_TASK_COLOR),
     display: 'inline-block',
     flex: '0 0 auto',
+    opacity: completed ? '0.3' : '1',
+    transition: 'opacity 0.2s ease',
   });
 };
 
@@ -61,7 +63,7 @@ const createOverflowDotNode = (extraDots) => {
   });
 };
 
-const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleColors }) => {
+const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleDots }) => {
   const top = createElement('div', 'fc-daygrid-day-top');
   const dayNumber = createElement('a', 'fc-daygrid-day-number', dayNumberText);
   const dotsRow = createElement('div', 'fc-dots-row');
@@ -74,8 +76,8 @@ const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleCo
     alignItems: 'center',
   });
 
-  visibleColors.forEach((color) => {
-    dotsRow.appendChild(createDotNode(color));
+  visibleDots.forEach(({ color, completed }) => {
+    dotsRow.appendChild(createDotNode(color, completed));
   });
 
   if (extraDots > 0) {
@@ -155,7 +157,10 @@ const CalendarPanel = ({
 
       flatTasks.forEach((task) => {
         if (occursOnAgendaDate(task, agendaDateKey)) {
-          colors.push(task.cor || DEFAULT_TASK_COLOR);
+          colors.push({
+            color: task.cor || DEFAULT_TASK_COLOR,
+            completed: isTaskCompletedOnDate(task, agendaDateKey),
+          });
         }
       });
 
@@ -182,9 +187,9 @@ const CalendarPanel = ({
           events={[]}
           dayCellContent={(arg) => {
             const isoDateKey = toIsoDateKey(arg.date);
-            const colors = dayDotsMap.get(isoDateKey) || [];
-            const visibleColors = colors.slice(0, maxDots);
-            const extraDots = colors.length - visibleColors.length;
+            const dots = dayDotsMap.get(isoDateKey) || [];
+            const visibleDots = dots.slice(0, maxDots);
+            const extraDots = dots.length - visibleDots.length;
             const hasSpecialDate = (specialDates || []).some((specialDate) => occursOnIsoDate(specialDate, isoDateKey));
 
             // FullCalendar accepts domNodes here. Using DOM nodes keeps untrusted
@@ -192,7 +197,7 @@ const CalendarPanel = ({
             return {
               domNodes: buildDayCellNodes({
                 dayNumberText: arg.dayNumberText,
-                visibleColors,
+                visibleDots,
                 extraDots,
                 hasSpecialDate,
               }),

@@ -9,6 +9,7 @@ const AgendaScreen = ({
   onDateClick,
   onRemoveSpecialDate,
   onRemoveTask,
+  onReorderTasks,
   onToggleTask,
   selectedDate,
   specialDates,
@@ -30,6 +31,7 @@ const AgendaScreen = ({
         tasks={tasks}
         onAddTask={onAddTask}
         onRemoveTask={onRemoveTask}
+        onReorderTasks={onReorderTasks}
         onToggleTask={onToggleTask}
       />
     </>

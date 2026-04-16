@@ -175,7 +175,7 @@ export const filterTasksByDate = (allTasks, dateKey) => {
       .filter((task) => occursOnAgendaDate(task, dateKey))
       .map((task) => createTaskView(task, dateKey));
 
-    accumulator[period.id] = sortTasksByTime(nextTasks);
+    accumulator[period.id] = nextTasks;
     return accumulator;
   }, createEmptyAgenda());
 };

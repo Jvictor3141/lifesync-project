@@ -63,6 +63,7 @@ function AuthenticatedApp({ onLogout, user }) {
     deleteFinancialHistoryMonth,
     addSpecialDate,
     removeSpecialDate,
+    reorderTasks,
   } = useWorkspaceData(user?.uid);
 
   const contentBySection = {
@@ -74,6 +75,7 @@ function AuthenticatedApp({ onLogout, user }) {
         onDateClick={setSelectedDate}
         onRemoveSpecialDate={removeSpecialDate}
         onRemoveTask={removeTask}
+        onReorderTasks={reorderTasks}
         onToggleTask={toggleTask}
         selectedDate={selectedDate}
         specialDates={specialDates}

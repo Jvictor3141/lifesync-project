@@ -40,6 +40,7 @@ const TaskSection = ({
   tasks,
   onAddTask,
   onRemoveTask,
+  onReorderTasks,
   onToggleTask,
 }) => {
   const [formState, setFormState] = useState(INITIAL_FORM);
@@ -106,7 +107,7 @@ const TaskSection = ({
           />
         </div>
 
-        <div className='grid w-auto grid-cols-3 gap-4 md:gap-4'>
+        <div className='grid w-auto grid-cols-2 md:grid-cols-3 gap-4 md:gap-4'>
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Horário
@@ -179,6 +180,7 @@ const TaskSection = ({
             period={period}
             tasks={tasks?.[period.id] || []}
             onRemoveTask={onRemoveTask}
+            onReorderTasks={onReorderTasks}
             onToggleTask={onToggleTask}
           />
         ))}

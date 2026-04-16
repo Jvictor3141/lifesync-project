@@ -174,6 +174,23 @@ export const useWorkspaceData = (uid) => {
     );
   };
 
+  const reorderTasks = async (periodId, orderedIds) => {
+    const previousTasks = allTasks;
+    const taskMap = new Map((allTasks[periodId] || []).map((task) => [task.id, task]));
+    const nextPeriod = [
+      ...orderedIds.map((id) => taskMap.get(id)).filter(Boolean),
+      ...(allTasks[periodId] || []).filter((task) => !orderedIds.includes(task.id)),
+    ];
+
+    await persistAgenda(
+      { ...allTasks, [periodId]: nextPeriod },
+      selectedDate,
+      previousTasks,
+      '',
+      'Erro ao reordenar tarefas.',
+    );
+  };
+
   const removeTask = async (taskId) => {
     const foundTask = flattenAgendaTasks(allTasks).find((task) => task.id === taskId);
 
@@ -376,6 +393,7 @@ export const useWorkspaceData = (uid) => {
     addTask,
     toggleTask,
     removeTask,
+    reorderTasks,
     addEntry,
     addExpense,
     removeTransaction,

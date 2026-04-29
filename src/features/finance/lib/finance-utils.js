@@ -46,9 +46,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const createEmptyFinanceData = () => ({
   entradas: [],
   gastos: [],
+  orcamentos: [],
 });
 
 export const MAX_TRANSACTIONS_PER_TYPE = 400;
+export const MAX_BUDGETS = 200;
+export const MAX_BUDGET_ITEMS = 80;
 export const MAX_TRANSACTION_AMOUNT = 1000000000;
 
 export const formatCurrency = (value) => (
@@ -95,6 +98,16 @@ const sanitizeTransactionAmount = (value) => {
   return Math.round(amount * 100) / 100;
 };
 
+const sanitizeBudgetItemQuantity = (value) => {
+  const quantity = Number(value);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return 1;
+  }
+
+  return Math.min(Math.round(quantity * 100) / 100, 1000000);
+};
+
 const sanitizeTransactionCategory = (category, type) => {
   const allowedCategories = type === 'entrada' ? ENTRY_CATEGORY_SET : EXPENSE_CATEGORY_SET;
   const fallbackCategory = type === 'entrada' ? 'salario' : 'outros';
@@ -129,6 +142,48 @@ const sanitizeTransactionRecord = (item, type) => {
   };
 };
 
+const buildFallbackBudgetId = (item) => (
+  [
+    'orcamento',
+    sanitizeTransactionDate(item?.data),
+    normalizeSingleLineText(item?.titulo || item?.descricao, MAX_TEXT_LENGTHS.transactionDescription),
+  ].filter(Boolean).join('|') || 'orcamento'
+);
+
+const sanitizeBudgetItem = (item) => {
+  const descricao = normalizeSingleLineText(item?.descricao || item?.item, MAX_TEXT_LENGTHS.transactionDescription);
+  const valor = sanitizeTransactionAmount(item?.valor);
+  const quantidade = sanitizeBudgetItemQuantity(item?.quantidade);
+
+  if (!descricao || !valor) {
+    return null;
+  }
+
+  return { descricao, quantidade, valor };
+};
+
+const sanitizeBudgetRecord = (item) => {
+  const titulo = normalizeSingleLineText(
+    item?.titulo || item?.descricao,
+    MAX_TEXT_LENGTHS.transactionDescription,
+  );
+  const itens = Array.isArray(item?.itens)
+    ? item.itens.map(sanitizeBudgetItem).filter(Boolean).slice(0, MAX_BUDGET_ITEMS)
+    : [sanitizeBudgetItem(item)].filter(Boolean);
+
+  if (!titulo || itens.length === 0) {
+    return null;
+  }
+
+  return {
+    id: sanitizeLooseId(item?.id, buildFallbackBudgetId(item)),
+    titulo,
+    itens,
+    valor: itens.reduce((total, budgetItem) => total + (budgetItem.quantidade * budgetItem.valor), 0),
+    data: sanitizeTransactionDate(item?.data),
+  };
+};
+
 export const sanitizeFinanceData = (financialData) => ({
   entradas: (financialData?.entradas || [])
     .map((entry) => sanitizeTransactionRecord(entry, 'entrada'))
@@ -138,22 +193,28 @@ export const sanitizeFinanceData = (financialData) => ({
     .map((expense) => sanitizeTransactionRecord(expense, 'gasto'))
     .filter(Boolean)
     .slice(0, MAX_TRANSACTIONS_PER_TYPE),
+  orcamentos: (financialData?.orcamentos || [])
+    .map(sanitizeBudgetRecord)
+    .filter(Boolean)
+    .slice(0, MAX_BUDGETS),
 });
 
+const cloneDate = (value) => new Date(safeDate(value).getTime());
+
 const startOfDay = (value) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   date.setHours(0, 0, 0, 0);
   return date;
 };
 
 const endOfDay = (value) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   date.setHours(23, 59, 59, 999);
   return date;
 };
 
 const startOfMonth = (value) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   return new Date(date.getFullYear(), date.getMonth(), 1);
 };
 
@@ -163,19 +224,19 @@ const endOfMonth = (value) => {
 };
 
 const addDays = (value, amount) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   date.setDate(date.getDate() + amount);
   return date;
 };
 
 const addMonths = (value, amount) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   date.setMonth(date.getMonth() + amount);
   return date;
 };
 
 const startOfYear = (value) => {
-  const date = safeDate(value);
+  const date = cloneDate(value);
   return new Date(date.getFullYear(), 0, 1);
 };
 
@@ -641,6 +702,10 @@ export const buildTransactions = (financialData, filterType = 'todos') => {
 
   return transactions.sort((left, right) => sortByDateDesc(left.data, right.data));
 };
+
+export const buildBudgets = (financialData) => (
+  [...(financialData?.orcamentos || [])].sort((left, right) => sortByDateDesc(left.data, right.data))
+);
 
 export const buildHistoryGroups = (historyMonths) => (
   Object.entries((historyMonths || []).reduce((accumulator, monthKey) => {

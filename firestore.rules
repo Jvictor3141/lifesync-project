@@ -34,9 +34,10 @@ service cloud.firestore {
     }
 
     function isFinanceDoc(data) {
-      return data.keys().hasOnly(['entradas', 'gastos'])
+      return data.keys().hasOnly(['entradas', 'gastos', 'orcamentos'])
         && data.entradas is list && data.entradas.size() <= 400
-        && data.gastos is list && data.gastos.size() <= 400;
+        && data.gastos is list && data.gastos.size() <= 400
+        && data.orcamentos is list && data.orcamentos.size() <= 200;
     }
 
     function isSpecialDatesDoc(data) {

@@ -54,8 +54,11 @@ function AuthenticatedApp({ onLogout, user }) {
     addTask,
     toggleTask,
     removeTask,
+    addBudget,
+    acceptBudget,
     addEntry,
     addExpense,
+    removeBudget,
     removeTransaction,
     clearFinancialData,
     getFinancialHistoryMonths,
@@ -87,6 +90,9 @@ function AuthenticatedApp({ onLogout, user }) {
         financialData={financialData}
         onAddEntry={addEntry}
         onAddExpense={addExpense}
+        onAddBudget={addBudget}
+        onAcceptBudget={acceptBudget}
+        onRemoveBudget={removeBudget}
         onRemoveTransaction={removeTransaction}
         onClearMonth={clearFinancialData}
         onListHistoryMonths={getFinancialHistoryMonths}

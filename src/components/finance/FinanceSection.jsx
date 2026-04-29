@@ -1,6 +1,7 @@
 import React, { startTransition, useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import FinancialChart from '@/components/finance/FinancialChart';
+import BudgetsCard from '@/components/finance/BudgetsCard';
 import FinanceForms from '@/components/finance/FinanceForms';
 import FinanceHistoryDialog from '@/components/finance/FinanceHistoryDialog';
 import FinanceSummaryCards from '@/components/finance/FinanceSummaryCards';
@@ -9,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useFinancialChartData } from '@/features/finance/hooks/useFinancialChartData';
 import {
   buildFinanceSummary,
+  buildBudgets,
   buildHistoryGroups,
   buildTransactions,
   createEmptyFinanceData,
@@ -24,6 +26,9 @@ const FinanceSection = ({
   financialData,
   onAddEntry,
   onAddExpense,
+  onAddBudget,
+  onAcceptBudget,
+  onRemoveBudget,
   onRemoveTransaction,
   onClearMonth,
   onListHistoryMonths,
@@ -57,6 +62,7 @@ const FinanceSection = ({
     () => buildTransactions(financialData, filterType),
     [financialData, filterType],
   );
+  const budgets = useMemo(() => buildBudgets(financialData), [financialData]);
   const historyGroups = useMemo(
     () => buildHistoryGroups(historyMonths),
     [historyMonths],
@@ -206,6 +212,14 @@ const FinanceSection = ({
           onSubmitExpense={handleAddExpense}
         />
       </section>
+
+      <BudgetsCard
+        budgets={budgets}
+        formatCurrency={formatCurrency}
+        onAcceptBudget={onAcceptBudget}
+        onAddBudget={onAddBudget}
+        onRemoveBudget={onRemoveBudget}
+      />
 
       <TransactionsCard
         entryCategories={ENTRY_CATEGORIES}

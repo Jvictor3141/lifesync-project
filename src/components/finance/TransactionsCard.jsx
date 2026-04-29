@@ -80,7 +80,7 @@ const TransactionsCard = ({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Limpar dados do mês?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação remove todas as entradas e gastos do mês atual.
+                      Esta ação remove todas as entradas, gastos e orçamentos do mês atual.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

@@ -276,6 +276,83 @@ export const useWorkspaceData = (uid) => {
     );
   };
 
+  const addBudget = async (budgetData) => {
+    const previousFinancialData = financialData;
+    const nextFinancialData = {
+      ...financialData,
+      orcamentos: [
+        ...(financialData.orcamentos || []),
+        {
+          ...budgetData,
+          id: createId(),
+          data: new Date().toISOString(),
+        },
+      ],
+    };
+
+    await persistFinance(
+      nextFinancialData,
+      previousFinancialData,
+      'Orçamento criado.',
+      'Erro ao criar orçamento.',
+    );
+  };
+
+  const acceptBudget = async (budgetId) => {
+    const budget = (financialData.orcamentos || []).find((item) => item.id === budgetId);
+
+    if (!budget) {
+      return;
+    }
+
+    const previousFinancialData = financialData;
+    const nextFinancialData = {
+      ...financialData,
+      orcamentos: (financialData.orcamentos || []).filter((item) => item.id !== budgetId),
+      gastos: [
+        ...(financialData.gastos || []),
+        ...(budget.itens || []).map((item) => ({
+          valor: item.quantidade * item.valor,
+          descricao: item.quantidade > 1
+            ? `${budget.titulo} - ${item.descricao} (${item.quantidade}x)`
+            : `${budget.titulo} - ${item.descricao}`,
+          categoria: 'outros',
+          id: createId(),
+          tipo: 'gasto',
+          data: new Date().toISOString(),
+        })),
+      ],
+    };
+
+    await persistFinance(
+      nextFinancialData,
+      previousFinancialData,
+      'Orçamento aceito e lançado como gasto.',
+      'Erro ao aceitar orçamento.',
+    );
+  };
+
+  const removeBudget = async (budgetId) => {
+    const hasBudget = (financialData.orcamentos || []).some((item) => item.id === budgetId);
+
+    if (!hasBudget) {
+      return;
+    }
+
+    const previousFinancialData = financialData;
+    const nextFinancialData = {
+      ...financialData,
+      orcamentos: (financialData.orcamentos || []).filter((item) => item.id !== budgetId),
+    };
+
+    await persistFinance(
+      nextFinancialData,
+      previousFinancialData,
+      'Orçamento removido.',
+      'Erro ao remover orçamento.',
+    );
+  };
+
   const removeTransaction = async (id, type) => {
     const previousFinancialData = financialData;
     const nextFinancialData = {
@@ -395,6 +472,9 @@ export const useWorkspaceData = (uid) => {
     reorderTasks,
     addEntry,
     addExpense,
+    addBudget,
+    acceptBudget,
+    removeBudget,
     removeTransaction,
     clearFinancialData,
     getFinancialHistoryMonths,

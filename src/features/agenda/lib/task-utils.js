@@ -1,4 +1,4 @@
-﻿import { safeDate, toAgendaDateKey } from '@/shared/lib/date';
+﻿import { fromIsoDateKey, safeDate, toAgendaDateKey, toIsoDateKey } from '@/shared/lib/date';
 import {
   MAX_TEXT_LENGTHS,
   isAgendaDateKey,
@@ -244,4 +244,83 @@ export const toggleTaskCompletion = (task, dateKey) => {
     completed: completedDates.size > 0,
     completedDates: Array.from(completedDates),
   };
+};
+
+// --- Streak calculation ---
+
+const shiftDate = (dateKey, days) => {
+  const date = safeDate(dateKey);
+  date.setDate(date.getDate() + days);
+  return toAgendaDateKey(date);
+};
+
+const getWeekKey = (dateKey) => {
+  const date = safeDate(dateKey);
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return toIsoDateKey(monday);
+};
+
+const getPreviousWeekKey = (weekKey) => {
+  const date = fromIsoDateKey(weekKey);
+  date.setDate(date.getDate() - 7);
+  return toIsoDateKey(date);
+};
+
+const getMonthKey = (dateKey) => toIsoDateKey(safeDate(dateKey)).slice(0, 7);
+
+const getPreviousMonthKey = (monthKey) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  return month > 1
+    ? `${year}-${String(month - 1).padStart(2, '0')}`
+    : `${year - 1}-12`;
+};
+
+export const getTaskStreak = (task, referenceDate = toAgendaDateKey()) => {
+  if (!isRecurringTask(task) || !task.completedDates?.length) return 0;
+
+  const { frequencia, completedDates } = task;
+
+  if (frequencia === 'diario') {
+    const dateSet = new Set(completedDates);
+    const yesterday = shiftDate(referenceDate, -1);
+    const start = dateSet.has(referenceDate) ? referenceDate
+      : dateSet.has(yesterday) ? yesterday
+      : null;
+    if (!start) return 0;
+    let streak = 0;
+    let current = start;
+    while (dateSet.has(current)) { streak++; current = shiftDate(current, -1); }
+    return streak;
+  }
+
+  if (frequencia === 'semanal') {
+    const weekSet = new Set(completedDates.map(getWeekKey));
+    const currentWeek = getWeekKey(referenceDate);
+    const prevWeek = getPreviousWeekKey(currentWeek);
+    const start = weekSet.has(currentWeek) ? currentWeek
+      : weekSet.has(prevWeek) ? prevWeek
+      : null;
+    if (!start) return 0;
+    let streak = 0;
+    let current = start;
+    while (weekSet.has(current)) { streak++; current = getPreviousWeekKey(current); }
+    return streak;
+  }
+
+  if (frequencia === 'mensal') {
+    const monthSet = new Set(completedDates.map(getMonthKey));
+    const currentMonth = getMonthKey(referenceDate);
+    const prevMonth = getPreviousMonthKey(currentMonth);
+    const start = monthSet.has(currentMonth) ? currentMonth
+      : monthSet.has(prevMonth) ? prevMonth
+      : null;
+    if (!start) return 0;
+    let streak = 0;
+    let current = start;
+    while (monthSet.has(current)) { streak++; current = getPreviousMonthKey(current); }
+    return streak;
+  }
+
+  return 0;
 };

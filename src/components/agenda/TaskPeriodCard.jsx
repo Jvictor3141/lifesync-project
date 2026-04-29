@@ -14,10 +14,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, Check, Clock, GripVertical, Repeat, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Check, Clock, Flame, GripVertical, Repeat, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { sortTasksByTime } from '@/features/agenda/lib/task-utils';
+import { getTaskStreak, sortTasksByTime } from '@/features/agenda/lib/task-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,8 +45,11 @@ const PERIOD_STYLES = {
   },
 };
 
-const SortableTaskItem = ({ task, onToggleTask, onRemoveTask }) => {
+const STREAK_UNIT = { diario: ['dia', 'dias'], semanal: ['semana', 'semanas'], mensal: ['mês', 'meses'] };
+
+const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const streak = getTaskStreak(task, selectedDate);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -106,6 +109,17 @@ const SortableTaskItem = ({ task, onToggleTask, onRemoveTask }) => {
               {task.frequencia}
             </span>
           )}
+
+          {streak >= 2 && (
+            <span
+              className="flex items-center gap-1 font-semibold tabular-nums"
+              style={{ color: task.cor }}
+              title={`${streak} ${streak === 1 ? STREAK_UNIT[task.frequencia]?.[0] : STREAK_UNIT[task.frequencia]?.[1]} consecutivo${streak === 1 ? '' : 's'}`}
+            >
+              <Flame className="w-3 h-3" />
+              {streak}
+            </span>
+          )}
         </div>
       </div>
 
@@ -140,7 +154,7 @@ const SortableTaskItem = ({ task, onToggleTask, onRemoveTask }) => {
   );
 };
 
-const TaskPeriodCard = ({ period, tasks, onRemoveTask, onReorderTasks, onToggleTask }) => {
+const TaskPeriodCard = ({ period, tasks, selectedDate, onRemoveTask, onReorderTasks, onToggleTask }) => {
   const style = PERIOD_STYLES[period.id] ?? PERIOD_STYLES.tarde;
 
   const sensors = useSensors(
@@ -198,6 +212,7 @@ const TaskPeriodCard = ({ period, tasks, onRemoveTask, onReorderTasks, onToggleT
                   <SortableTaskItem
                     key={task.id}
                     task={task}
+                    selectedDate={selectedDate}
                     onToggleTask={onToggleTask}
                     onRemoveTask={onRemoveTask}
                   />

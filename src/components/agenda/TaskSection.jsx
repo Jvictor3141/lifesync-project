@@ -38,6 +38,7 @@ const TASK_FORM_FIELD_CLASSNAME = 'border-border/70 bg-background/80';
 const TaskSection = ({
   title,
   tasks,
+  selectedDate,
   onAddTask,
   onRemoveTask,
   onReorderTasks,
@@ -179,6 +180,7 @@ const TaskSection = ({
             key={period.id}
             period={period}
             tasks={tasks?.[period.id] || []}
+            selectedDate={selectedDate}
             onRemoveTask={onRemoveTask}
             onReorderTasks={onReorderTasks}
             onToggleTask={onToggleTask}

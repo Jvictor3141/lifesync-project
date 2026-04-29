@@ -29,6 +29,7 @@ const AgendaScreen = ({
       <TaskSection
         title="Minhas Tarefas"
         tasks={tasks}
+        selectedDate={selectedDate}
         onAddTask={onAddTask}
         onRemoveTask={onRemoveTask}
         onReorderTasks={onReorderTasks}

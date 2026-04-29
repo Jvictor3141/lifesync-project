@@ -11,7 +11,9 @@ import {
   flattenAgendaTasks,
   getTaskDateKey,
   normalizeTask,
+  removeTaskFromAgenda,
   toggleTaskCompletion,
+  TASK_REMOVAL_SCOPES,
   TASK_PERIODS,
 } from '@/features/agenda/lib/task-utils';
 import {
@@ -191,7 +193,7 @@ export const useWorkspaceData = (uid) => {
     );
   };
 
-  const removeTask = async (taskId) => {
+  const removeTask = async (taskId, scope = TASK_REMOVAL_SCOPES.allOccurrences) => {
     const foundTask = flattenAgendaTasks(allTasks).find((task) => task.id === taskId);
 
     if (!foundTask) {
@@ -200,10 +202,7 @@ export const useWorkspaceData = (uid) => {
 
     const previousTasks = allTasks;
     const taskDateKey = getTaskDateKey(foundTask, selectedDate);
-    const nextTasks = TASK_PERIODS.reduce((accumulator, period) => {
-      accumulator[period.id] = (allTasks[period.id] || []).filter((task) => task.id !== taskId);
-      return accumulator;
-    }, createEmptyAgenda());
+    const nextTasks = removeTaskFromAgenda(allTasks, taskId, selectedDate, scope);
 
     await persistAgenda(
       nextTasks,

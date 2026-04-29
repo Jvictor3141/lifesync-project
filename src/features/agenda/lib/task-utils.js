@@ -18,6 +18,11 @@ export const TASK_PERIODS = [
 export const DEFAULT_TASK_COLOR = '#7BAECC';
 export const MAX_TASKS_PER_PERIOD = 60;
 export const MAX_TASK_COMPLETED_DATES = 366;
+export const MAX_TASK_DELETED_DATES = 366;
+export const TASK_REMOVAL_SCOPES = {
+  selectedDate: 'selected-date',
+  allOccurrences: 'all-occurrences',
+};
 
 export const TASK_FREQUENCIES = [
   { value: 'diario', label: 'Diário' },
@@ -42,12 +47,20 @@ const sanitizeCreatedAt = (value, fallbackDateKey) => {
   return safeDate(value, fallbackDate).toISOString();
 };
 
-const sanitizeCompletedDates = (completedDates) => (
+const sanitizeTaskDateList = (dates, maxDates) => (
   Array.from(new Set(
-    (Array.isArray(completedDates) ? completedDates : [])
+    (Array.isArray(dates) ? dates : [])
       .map((dateKey) => sanitizeAgendaDateKey(dateKey, ''))
       .filter(Boolean),
-  )).slice(0, MAX_TASK_COMPLETED_DATES)
+  )).slice(0, maxDates)
+);
+
+const sanitizeCompletedDates = (completedDates) => (
+  sanitizeTaskDateList(completedDates, MAX_TASK_COMPLETED_DATES)
+);
+
+const sanitizeDeletedDates = (deletedDates) => (
+  sanitizeTaskDateList(deletedDates, MAX_TASK_DELETED_DATES)
 );
 
 const buildFallbackTaskId = (task, dateKey) => (
@@ -86,6 +99,7 @@ export const normalizeTask = (task, fallbackDateKey = toAgendaDateKey()) => {
     cor: sanitizeHexColor(task?.cor, DEFAULT_TASK_COLOR),
     completed: Boolean(task?.completed),
     completedDates: sanitizeCompletedDates(task?.completedDates),
+    deletedDates: sanitizeDeletedDates(task?.deletedDates),
     frequencia: sanitizeTaskFrequency(task?.frequencia),
     dateKey,
     createdAt: sanitizeCreatedAt(task?.createdAt, dateKey),
@@ -116,8 +130,13 @@ export const createTaskDraft = ({ text, time, color, frequency }) => ({
   cor: sanitizeHexColor(color, DEFAULT_TASK_COLOR),
   completed: false,
   completedDates: [],
+  deletedDates: [],
   frequencia: sanitizeTaskFrequency(frequency),
 });
+
+export const isTaskDeletedOnDate = (task, dateKey) => (
+  isRecurringTask(task) && Array.isArray(task?.deletedDates) && task.deletedDates.includes(dateKey)
+);
 
 export const occursOnAgendaDate = (task, dateKey) => {
   const normalizedTask = normalizeTask(task, dateKey);
@@ -129,6 +148,10 @@ export const occursOnAgendaDate = (task, dateKey) => {
 
   const createdDate = safeDate(normalizedTask.dateKey);
   if (createdDate > date) {
+    return false;
+  }
+
+  if (isTaskDeletedOnDate(normalizedTask, dateKey)) {
     return false;
   }
 
@@ -245,6 +268,47 @@ export const toggleTaskCompletion = (task, dateKey) => {
     completedDates: Array.from(completedDates),
   };
 };
+
+const removeTaskFromPeriod = (tasks, taskId, dateKey, scope) => (
+  (tasks || []).reduce((nextTasks, task) => {
+    const normalizedTask = normalizeTask(task, dateKey);
+
+    if (normalizedTask.id !== taskId) {
+      nextTasks.push(normalizedTask);
+      return nextTasks;
+    }
+
+    if (!isRecurringTask(normalizedTask) || scope === TASK_REMOVAL_SCOPES.allOccurrences) {
+      return nextTasks;
+    }
+
+    const deletedDates = new Set(normalizedTask.deletedDates);
+    deletedDates.add(dateKey);
+
+    nextTasks.push({
+      ...normalizedTask,
+      completedDates: normalizedTask.completedDates.filter((completedDate) => completedDate !== dateKey),
+      deletedDates: Array.from(deletedDates),
+    });
+
+    return nextTasks;
+  }, [])
+);
+
+export const removeTaskFromAgenda = (
+  allTasks,
+  taskId,
+  dateKey,
+  scope = TASK_REMOVAL_SCOPES.allOccurrences,
+) => TASK_PERIODS.reduce((accumulator, period) => {
+  accumulator[period.id] = removeTaskFromPeriod(
+    allTasks?.[period.id],
+    taskId,
+    dateKey,
+    scope,
+  );
+  return accumulator;
+}, createEmptyAgenda());
 
 // --- Streak calculation ---
 

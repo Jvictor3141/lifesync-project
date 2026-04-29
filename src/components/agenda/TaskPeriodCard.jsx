@@ -16,8 +16,14 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowUpDown, Check, Clock, Flame, GripVertical, Repeat, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getTaskStreak, sortTasksByTime } from '@/features/agenda/lib/task-utils';
+import {
+  getTaskStreak,
+  isRecurringTask,
+  sortTasksByTime,
+  TASK_REMOVAL_SCOPES,
+} from '@/features/agenda/lib/task-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +52,39 @@ const PERIOD_STYLES = {
 };
 
 const STREAK_UNIT = { diario: ['dia', 'dias'], semanal: ['semana', 'semanas'], mensal: ['mês', 'meses'] };
+
+const getRemoveTaskDescription = (task) => (
+  isRecurringTask(task)
+    ? 'Escolha se deseja remover apenas esta ocorrência ou apagar a tarefa recorrente inteira.'
+    : 'Esta ação não pode ser desfeita. A tarefa será removida.'
+);
+
+const TaskRemovalActions = ({ task, onRemoveTask }) => {
+  if (!isRecurringTask(task)) {
+    return (
+      <AlertDialogAction onClick={() => onRemoveTask(task.id, TASK_REMOVAL_SCOPES.allOccurrences)}>
+        Remover
+      </AlertDialogAction>
+    );
+  }
+
+  return (
+    <>
+      <AlertDialogAction
+        className={buttonVariants({ variant: 'outline' })}
+        onClick={() => onRemoveTask(task.id, TASK_REMOVAL_SCOPES.selectedDate)}
+      >
+        Remover só esta data
+      </AlertDialogAction>
+      <AlertDialogAction
+        className={buttonVariants({ variant: 'destructive' })}
+        onClick={() => onRemoveTask(task.id, TASK_REMOVAL_SCOPES.allOccurrences)}
+      >
+        Remover todas
+      </AlertDialogAction>
+    </>
+  );
+};
 
 const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
@@ -139,14 +178,12 @@ const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) =>
           <AlertDialogHeader>
             <AlertDialogTitle>Remover tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa será removida.
+              {getRemoveTaskDescription(task)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onRemoveTask(task.id)}>
-              Remover
-            </AlertDialogAction>
+            <TaskRemovalActions task={task} onRemoveTask={onRemoveTask} />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

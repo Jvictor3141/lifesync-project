@@ -143,13 +143,13 @@ const BudgetModal = ({ onAddBudget }) => {
           <Plus className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="grid h-[min(82vh,640px)] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b border-border/70 px-6 py-5">
+      <DialogContent className="grid h-[min(82vh,640px)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:w-full sm:max-w-3xl">
+        <DialogHeader className="border-b border-border/70 px-4 py-5 sm:px-6">
           <DialogTitle>Novo orçamento</DialogTitle>
         </DialogHeader>
 
         <form id="budget-form" onSubmit={handleSubmit} className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)]">
-          <div className="space-y-2 px-6 py-5">
+          <div className="space-y-2 px-4 py-5 sm:px-6">
             <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Título do orçamento
             </label>
@@ -162,9 +162,9 @@ const BudgetModal = ({ onAddBudget }) => {
             />
           </div>
 
-          <div className="min-h-0 overflow-auto border-y border-border/70 px-6 py-4 planner-scroll">
-            <div className="min-w-[640px]">
-              <div className="grid grid-cols-[minmax(0,1fr)_110px_150px_40px] gap-3 px-1 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="min-h-0 overflow-y-auto border-y border-border/70 px-4 py-4 planner-scroll sm:px-6">
+            <div className="w-full">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(3.75rem,0.24fr)_minmax(5.5rem,0.36fr)_2.25rem] gap-2 px-1 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:grid-cols-[minmax(0,1fr)_minmax(5rem,0.22fr)_minmax(7rem,0.34fr)_2.5rem] sm:gap-3 sm:text-xs sm:tracking-[0.16em]">
                 <div>Item</div>
                 <div>Qtd.</div>
                 <div>Valor</div>
@@ -172,8 +172,9 @@ const BudgetModal = ({ onAddBudget }) => {
               </div>
               <div className="space-y-3">
                 {form.itens.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[minmax(0,1fr)_110px_150px_40px] gap-3">
+                  <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(3.75rem,0.24fr)_minmax(5.5rem,0.36fr)_2.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(5rem,0.22fr)_minmax(7rem,0.34fr)_2.5rem] sm:gap-3">
                     <Input
+                      className="min-w-0 px-2 text-sm sm:px-3"
                       value={item.descricao}
                       maxLength={MAX_TEXT_LENGTHS.transactionDescription}
                       placeholder="Descrição do item"
@@ -181,6 +182,7 @@ const BudgetModal = ({ onAddBudget }) => {
                       required={index === 0}
                     />
                     <Input
+                      className="min-w-0 px-2 text-sm sm:px-3"
                       type="number"
                       step="1"
                       min="1"
@@ -190,6 +192,7 @@ const BudgetModal = ({ onAddBudget }) => {
                       required={index === 0}
                     />
                     <Input
+                      className="min-w-0 px-2 text-sm sm:px-3"
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -203,7 +206,7 @@ const BudgetModal = ({ onAddBudget }) => {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="rounded-2xl text-muted-foreground hover:text-[var(--finance-expense)]"
+                      className="size-9 rounded-2xl text-muted-foreground hover:text-[var(--finance-expense)] sm:size-10"
                       onClick={() => removeItem(index)}
                       title="Remover item"
                     >
@@ -226,8 +229,8 @@ const BudgetModal = ({ onAddBudget }) => {
           </div>
         </form>
 
-        <DialogFooter className="border-t border-border/70 px-6 py-4">
-          <div className="mr-auto text-sm text-muted-foreground">
+        <DialogFooter className="border-t border-border/70 px-4 py-4 sm:px-6">
+          <div className="w-full text-sm text-muted-foreground sm:mr-auto sm:w-auto">
             Total: <span className="font-semibold text-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
           </div>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>

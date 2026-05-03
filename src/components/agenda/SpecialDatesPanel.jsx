@@ -175,10 +175,11 @@ const SpecialDatesPanel = ({
                   </div>
                 </div>
 
-                <div className="grid gap-3 rounded-[1.25rem] border border-border/70 bg-background/45 p-4">
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="grid gap-3 rounded-[1.25rem] border border-border bg-muted/50 p-4">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <Checkbox
                       checked={formState.oneTime}
+                      className="border-border/80"
                       onCheckedChange={(value) => setFormState((current) => ({
                         ...current,
                         oneTime: Boolean(value),
@@ -188,9 +189,10 @@ const SpecialDatesPanel = ({
                     Acontece apenas uma vez
                   </label>
 
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <Checkbox
                       checked={formState.withTime}
+                      className="border-border/80"
                       onCheckedChange={(value) => setFormState((current) => ({
                         ...current,
                         withTime: Boolean(value),

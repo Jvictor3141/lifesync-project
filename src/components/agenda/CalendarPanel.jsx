@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -109,6 +110,98 @@ const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleDo
   return nodes;
 };
 
+const PERIOD_LABELS = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
+const TOOLTIP_WIDTH = 220;
+const TOOLTIP_MARGIN = 8;
+
+const DayTooltip = ({ tooltip }) => {
+  if (!tooltip) return null;
+
+  const { cellRect, tasksByPeriod, specialDatesOnDay, isoDate } = tooltip;
+
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const dateLabel = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+
+  const totalTasks = Object.values(tasksByPeriod).reduce((sum, arr) => sum + arr.length, 0);
+  const isEmpty = totalTasks === 0 && specialDatesOnDay.length === 0;
+
+  let x = cellRect.left + cellRect.width / 2;
+  let y = cellRect.top - TOOLTIP_MARGIN;
+  let transformY = '-100%';
+
+  if (cellRect.top < 200) {
+    y = cellRect.bottom + TOOLTIP_MARGIN;
+    transformY = '0%';
+  }
+
+  x = Math.max(
+    TOOLTIP_WIDTH / 2 + TOOLTIP_MARGIN,
+    Math.min(x, window.innerWidth - TOOLTIP_WIDTH / 2 - TOOLTIP_MARGIN),
+  );
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        left: x,
+        top: y,
+        transform: `translateX(-50%) translateY(${transformY})`,
+        width: TOOLTIP_WIDTH,
+        zIndex: 9999,
+        pointerEvents: 'none',
+      }}
+      className="rounded-[1rem] border border-border bg-card p-3 shadow-lg text-xs animate-in fade-in-0 zoom-in-95 duration-150"
+    >
+      <p className="font-semibold text-foreground mb-2 capitalize">{dateLabel}</p>
+
+      {isEmpty ? (
+        <p className="text-muted-foreground">Dia livre</p>
+      ) : (
+        <>
+          {Object.entries(tasksByPeriod).map(([period, tasks]) => {
+            if (tasks.length === 0) return null;
+            const visible = tasks.slice(0, 3);
+            const extra = tasks.length - visible.length;
+
+            return (
+              <div key={period} className="mb-2">
+                <p className="text-muted-foreground font-medium mb-1">{PERIOD_LABELS[period]}</p>
+                <ul className="space-y-0.5 pl-1">
+                  {visible.map((task) => (
+                    <li key={task.id} className="flex items-center gap-1.5 text-foreground">
+                      <span
+                        className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: sanitizeHexColor(task.cor, DEFAULT_TASK_COLOR) }}
+                      />
+                      <span className="truncate">{task.text}</span>
+                    </li>
+                  ))}
+                  {extra > 0 && (
+                    <li className="text-muted-foreground pl-3">+{extra} mais</li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+
+          {specialDatesOnDay.length > 0 && (
+            <div className={totalTasks > 0 ? 'mt-2 pt-2 border-t border-border/50' : ''}>
+              {specialDatesOnDay.map((sd) => (
+                <div key={sd.id} className="flex items-center gap-1.5 text-[var(--planner-terracotta)]">
+                  <span>✦</span>
+                  <span className="truncate">{sd.nome}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>,
+    document.body,
+  );
+};
+
 const CalendarPanel = ({
   allTasks,
   currentMonth,
@@ -118,6 +211,16 @@ const CalendarPanel = ({
   specialDates,
 }) => {
   const [maxDots, setMaxDots] = useState(4);
+  const [tooltip, setTooltip] = useState(null);
+
+  const containerRef = useRef(null);
+  const tooltipTimerRef = useRef(null);
+  const hoveredCellRef = useRef(null);
+  const allTasksRef = useRef(allTasks);
+  const specialDatesRef = useRef(specialDates);
+
+  allTasksRef.current = allTasks;
+  specialDatesRef.current = specialDates;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -137,6 +240,62 @@ const CalendarPanel = ({
       } else {
         mediaQuery.removeListener(updateMaxDots);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const computeTooltipData = (isoDate) => {
+      const [year, month, day] = isoDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const agendaDateKey = toAgendaDateKey(date);
+      const tasks = allTasksRef.current;
+
+      return {
+        tasksByPeriod: {
+          manha: (tasks?.manha || []).filter((t) => occursOnAgendaDate(t, agendaDateKey)),
+          tarde: (tasks?.tarde || []).filter((t) => occursOnAgendaDate(t, agendaDateKey)),
+          noite: (tasks?.noite || []).filter((t) => occursOnAgendaDate(t, agendaDateKey)),
+        },
+        specialDatesOnDay: (specialDatesRef.current || []).filter((sd) => occursOnIsoDate(sd, isoDate)),
+      };
+    };
+
+    const handleMouseOver = (e) => {
+      const dayCell = e.target.closest('.fc-daygrid-day[data-date]');
+
+      if (dayCell === hoveredCellRef.current) return;
+
+      clearTimeout(tooltipTimerRef.current);
+      setTooltip(null);
+      hoveredCellRef.current = dayCell;
+
+      if (!dayCell) return;
+
+      const isoDate = dayCell.dataset.date;
+      if (!isoDate) return;
+
+      tooltipTimerRef.current = setTimeout(() => {
+        const cellRect = dayCell.getBoundingClientRect();
+        setTooltip({ cellRect, isoDate, ...computeTooltipData(isoDate) });
+      }, 2000);
+    };
+
+    const handleMouseLeave = () => {
+      clearTimeout(tooltipTimerRef.current);
+      setTooltip(null);
+      hoveredCellRef.current = null;
+    };
+
+    container.addEventListener('mouseover', handleMouseOver);
+    container.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      container.removeEventListener('mouseover', handleMouseOver);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      clearTimeout(tooltipTimerRef.current);
     };
   }, []);
 
@@ -173,54 +332,58 @@ const CalendarPanel = ({
   return (
     <Card>
       <CardContent className="p-4 md:p-5">
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          locale="pt-br"
-          height={500}
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: '',
-          }}
-          buttonText={{ today: 'Hoje' }}
-          events={[]}
-          dayCellContent={(arg) => {
-            const isoDateKey = toIsoDateKey(arg.date);
-            const dots = dayDotsMap.get(isoDateKey) || [];
-            const visibleDots = dots.slice(0, maxDots);
-            const extraDots = dots.length - visibleDots.length;
-            const hasSpecialDate = (specialDates || []).some((specialDate) => occursOnIsoDate(specialDate, isoDateKey));
+        <div ref={containerRef}>
+          <FullCalendar
+            plugins={[dayGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            locale="pt-br"
+            height={500}
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: '',
+            }}
+            buttonText={{ today: 'Hoje' }}
+            events={[]}
+            dayCellContent={(arg) => {
+              const isoDateKey = toIsoDateKey(arg.date);
+              const dots = dayDotsMap.get(isoDateKey) || [];
+              const visibleDots = dots.slice(0, maxDots);
+              const extraDots = dots.length - visibleDots.length;
+              const hasSpecialDate = (specialDates || []).some((specialDate) => occursOnIsoDate(specialDate, isoDateKey));
 
-            // FullCalendar accepts domNodes here. Using DOM nodes keeps untrusted
-            // data away from innerHTML and blocks stored XSS through task colors.
-            return {
-              domNodes: buildDayCellNodes({
-                dayNumberText: arg.dayNumberText,
-                visibleDots,
-                extraDots,
-                hasSpecialDate,
-              }),
-            };
-          }}
-          dateClick={(info) => onDateClick(toAgendaDateKey(info.date))}
-          dayCellClassNames={(arg) => {
-            const classes = ['cursor-pointer', 'transition-colors'];
+              // FullCalendar accepts domNodes here. Using DOM nodes keeps untrusted
+              // data away from innerHTML and blocks stored XSS through task colors.
+              return {
+                domNodes: buildDayCellNodes({
+                  dayNumberText: arg.dayNumberText,
+                  visibleDots,
+                  extraDots,
+                  hasSpecialDate,
+                }),
+              };
+            }}
+            dateClick={(info) => onDateClick(toAgendaDateKey(info.date))}
+            dayCellClassNames={(arg) => {
+              const classes = ['cursor-pointer', 'transition-colors'];
 
-            if (toIsoDateKey(arg.date) === toIsoDateKey(selectedDate)) {
-              classes.push('fc-selected-day');
-            }
+              if (toIsoDateKey(arg.date) === toIsoDateKey(selectedDate)) {
+                classes.push('fc-selected-day');
+              }
 
-            return classes;
-          }}
-          datesSet={(info) => {
-            const monthStart = info.view.currentStart;
-            onMonthChange({
-              year: monthStart.getFullYear(),
-              month: monthStart.getMonth(),
-            });
-          }}
-        />
+              return classes;
+            }}
+            datesSet={(info) => {
+              const monthStart = info.view.currentStart;
+              onMonthChange({
+                year: monthStart.getFullYear(),
+                month: monthStart.getMonth(),
+              });
+            }}
+          />
+        </div>
+
+        <DayTooltip tooltip={tooltip} />
       </CardContent>
     </Card>
   );

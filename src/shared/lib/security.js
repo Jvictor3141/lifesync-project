@@ -133,7 +133,7 @@ export const sanitizeProfilePhotoUrl = (value) => {
 
   try {
     const url = new URL(normalized);
-    return (url.protocol === 'https:' || url.protocol === 'http:') ? url.toString() : '';
+    return url.protocol === 'https:' ? url.toString() : '';
   } catch {
     return '';
   }

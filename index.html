@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/public/favicon.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src https://fonts.gstatic.com;
+      img-src 'self' data: blob: https:;
+      connect-src 'self'
+        https://*.googleapis.com
+        https://*.firebaseio.com
+        wss://*.firebaseio.com
+        https://*.firebaseapp.com
+        https://identitytoolkit.googleapis.com
+        https://securetoken.googleapis.com;
+      frame-src 'none';
+      object-src 'none';
+      base-uri 'self';
+    " />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Sofadi+One&display=swap" rel="stylesheet">

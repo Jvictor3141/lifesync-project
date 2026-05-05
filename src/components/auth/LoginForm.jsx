@@ -156,8 +156,10 @@ const LoginForm = () => {
         <div className="grid lg:grid-cols-[0.96fr_1.04fr]">
           <div className="hidden border-r border-border/70 bg-[var(--planner-sage-soft)] p-10 lg:flex lg:flex-col lg:justify-between">
             <div>
-              <p className="planner-kicker">Agenda com calma</p>
-              <BrandLogo className="brand-logo brand-logo-auth mt-6 h-14 w-auto" />
+              <div class="flex flex-col gap-3">
+                <p className="planner-kicker w-fit">Agenda com calma</p>
+                <BrandLogo className="brand-logo brand-logo-auth h-14 w-auto mx-auto" />
+              </div>
               <h1 className="mt-8 text-4xl font-semibold text-foreground">
                 Planeje rotinas e acompanhe finanças sem ruído visual.
               </h1>
@@ -175,7 +177,7 @@ const LoginForm = () => {
 
           <div className="p-6 sm:p-8 lg:p-10">
             <CardHeader className="px-0 pt-0 text-left">
-              <p className="planner-kicker">{isLogin ? 'Acesso seguro' : 'Nova conta'}</p>
+              <p className="planner-kicker w-fit">{isLogin ? 'Acesso seguro' : 'Nova conta'}</p>
               <CardTitle className="mt-6 text-3xl font-semibold text-foreground">
                 {isLogin ? 'Entre para abrir sua agenda.' : 'Crie sua conta para começar.'}
               </CardTitle>

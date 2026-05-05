@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceData } from '@/features/workspace/hooks/useWorkspaceData';
 import LoadingScreen from '@/shared/components/LoadingScreen';
+import LandingPage from '@/pages/landing/LandingPage';
 import './App.css';
 
 const AgendaScreen = lazy(() => import('@/components/agenda/AgendaScreen'));
@@ -22,12 +23,21 @@ const SectionFallback = () => (
 
 function App() {
   const { user, loading, logout } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   if (!user) {
+    if (!showLogin) {
+      return (
+        <>
+          <LandingPage onGetStarted={() => setShowLogin(true)} />
+          <Toaster />
+        </>
+      );
+    }
     return (
       <>
         <Suspense fallback={<LoadingScreen />}>

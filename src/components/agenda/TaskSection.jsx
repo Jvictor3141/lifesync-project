@@ -11,13 +11,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TaskPeriodCard from '@/components/agenda/TaskPeriodCard';
+import NextTaskBanner from '@/components/agenda/NextTaskBanner';
 import {
   createTaskDraft,
   DEFAULT_TASK_COLOR,
+  getCurrentPeriod,
+  getNextUpcomingTasks,
   getPeriodByTime,
   TASK_FREQUENCIES,
   TASK_PERIODS,
+  toCurrentTimeStr,
 } from '@/features/agenda/lib/task-utils';
+import { useCurrentTime } from '@/app/hooks/useCurrentTime';
+import { useTaskAlerts } from '@/features/agenda/hooks/useTaskAlerts';
+import { toAgendaDateKey } from '@/shared/lib/date';
 import { MAX_TEXT_LENGTHS } from '@/shared/lib/security';
 
 const UNIQUE_TASK_FREQUENCY = 'unica';
@@ -47,6 +54,14 @@ const TaskSection = ({
   const [formState, setFormState] = useState(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const now = useCurrentTime();
+  const isToday = selectedDate === toAgendaDateKey();
+  const currentTimeStr = isToday ? toCurrentTimeStr(now) : null;
+  const currentPeriodId = isToday ? getCurrentPeriod(now) : null;
+  const nextUpcomingTasks = isToday ? getNextUpcomingTasks(tasks, currentTimeStr) : [];
+
+  useTaskAlerts(tasks, now, isToday);
+
   const handleSubmit = async () => {
     if (!formState.text.trim() || !formState.time) {
       toast.error('Preencha a tarefa e o horário.');
@@ -54,7 +69,7 @@ const TaskSection = ({
     }
 
     const period = getPeriodByTime(formState.time);
-    const nextTask = createTaskDraft({
+    const taskDraft = createTaskDraft({
       text: formState.text,
       time: formState.time,
       color: formState.color,
@@ -64,12 +79,17 @@ const TaskSection = ({
     setIsSubmitting(true);
 
     try {
-      await onAddTask(period, nextTask);
+      await onAddTask(period, taskDraft);
       setFormState(INITIAL_FORM);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const totalTasks = Object.values(tasks || {}).reduce(
+    (total, periodTasks) => total + periodTasks.length,
+    0,
+  );
 
   return (
     <section className="glassmorphism rounded-[1.85rem] border p-5 md:p-6">
@@ -86,7 +106,7 @@ const TaskSection = ({
 
         <div className="planner-chip text-sm">
           <span className="h-2 w-2 rounded-full bg-[var(--planner-amber)]"></span>
-          {Object.values(tasks || {}).reduce((total, periodTasks) => total + periodTasks.length, 0)} tarefas no dia
+          {totalTasks} tarefas no dia
         </div>
       </div>
 
@@ -127,25 +147,25 @@ const TaskSection = ({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Frequência
             </label>
-              <Select
-                value={formState.frequency}
-                onValueChange={(value) => setFormState((current) => ({
-                  ...current,
-                  frequency: value,
-                }))}
-              >
-                <SelectTrigger className={`w-auto ${TASK_FORM_FIELD_CLASSNAME}`}>
-                  <SelectValue placeholder="Frequência" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_FREQUENCY_OPTIONS.map((frequency) => (
-                    <SelectItem key={frequency.value} value={frequency.value}>
-                      {frequency.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={formState.frequency}
+              onValueChange={(value) => setFormState((current) => ({
+                ...current,
+                frequency: value,
+              }))}
+            >
+              <SelectTrigger className={`w-auto ${TASK_FORM_FIELD_CLASSNAME}`}>
+                <SelectValue placeholder="Frequência" />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_FREQUENCY_OPTIONS.map((frequency) => (
+                  <SelectItem key={frequency.value} value={frequency.value}>
+                    {frequency.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Cor
@@ -174,6 +194,12 @@ const TaskSection = ({
         </Button>
       </div>
 
+      {nextUpcomingTasks.length > 0 && (
+        <div className="mt-4">
+          <NextTaskBanner tasks={nextUpcomingTasks} />
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {TASK_PERIODS.map((period) => (
           <TaskPeriodCard
@@ -181,6 +207,9 @@ const TaskSection = ({
             period={period}
             tasks={tasks?.[period.id] || []}
             selectedDate={selectedDate}
+            isCurrentPeriod={period.id === currentPeriodId}
+            isToday={isToday}
+            currentTimeStr={currentTimeStr}
             onRemoveTask={onRemoveTask}
             onReorderTasks={onReorderTasks}
             onToggleTask={onToggleTask}

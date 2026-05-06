@@ -5,7 +5,14 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { occursOnIsoDate } from '@/features/agenda/lib/special-date-utils';
-import { DEFAULT_TASK_COLOR, isTaskCompletedOnDate, occursOnAgendaDate } from '@/features/agenda/lib/task-utils';
+import {
+  DEFAULT_TASK_COLOR,
+  isTaskCompletedOnDate,
+  isTaskMissedOnDate,
+  occursOnAgendaDate,
+  toCurrentTimeStr,
+} from '@/features/agenda/lib/task-utils';
+import { useCurrentTime } from '@/app/hooks/useCurrentTime';
 import { toAgendaDateKey, toIsoDateKey } from '@/shared/lib/date';
 import { sanitizeHexColor } from '@/shared/lib/security';
 
@@ -31,19 +38,61 @@ const createElement = (tagName, className, textContent) => {
   return element;
 };
 
-const createDotNode = (color, completed = false) => {
-  const dot = createElement('span', 'fc-dot');
+const createDotNode = (color, completed = false, missed = false) => {
+  const safeColor = sanitizeHexColor(color, DEFAULT_TASK_COLOR);
 
-  return applyStyles(dot, {
+  if (!missed) {
+    const dot = createElement('span', 'fc-dot');
+    return applyStyles(dot, {
+      width: '8px',
+      height: '8px',
+      borderRadius: '9999px',
+      background: safeColor,
+      display: 'inline-block',
+      flex: '0 0 auto',
+      opacity: completed ? '0.3' : '1',
+      transition: 'opacity 0.2s ease',
+    });
+  }
+
+  // Missed: semi-transparent filled dot + × overlay at full opacity
+  const wrapper = createElement('span', 'fc-dot fc-dot-missed');
+  applyStyles(wrapper, {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     width: '8px',
     height: '8px',
-    borderRadius: '9999px',
-    background: sanitizeHexColor(color, DEFAULT_TASK_COLOR),
-    display: 'inline-block',
     flex: '0 0 auto',
-    opacity: completed ? '0.3' : '1',
-    transition: 'opacity 0.2s ease',
   });
+
+  const bg = createElement('span');
+  applyStyles(bg, {
+    position: 'absolute',
+    inset: '0',
+    borderRadius: '9999px',
+    background: safeColor,
+    opacity: '0.35',
+  });
+
+  const x = createElement('span', '', '×');
+  applyStyles(x, {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    zIndex: '1',
+    fontSize: '12px',
+    fontWeight: '900',
+    lineHeight: '1',
+    color: '#ef4444',
+    pointerEvents: 'none',
+  });
+
+  wrapper.appendChild(bg);
+  wrapper.appendChild(x);
+  return wrapper;
 };
 
 const createOverflowDotNode = (extraDots) => {
@@ -77,8 +126,8 @@ const buildDayCellNodes = ({ dayNumberText, extraDots, hasSpecialDate, visibleDo
     alignItems: 'center',
   });
 
-  visibleDots.forEach(({ color, completed }) => {
-    dotsRow.appendChild(createDotNode(color, completed));
+  visibleDots.forEach(({ color, completed, missed }) => {
+    dotsRow.appendChild(createDotNode(color, completed, missed));
   });
 
   if (extraDots > 0) {
@@ -210,6 +259,7 @@ const CalendarPanel = ({
   selectedDate,
   specialDates,
 }) => {
+  const now = useCurrentTime();
   const [maxDots, setMaxDots] = useState(4);
   const [tooltip, setTooltip] = useState(null);
 
@@ -300,6 +350,8 @@ const CalendarPanel = ({
   }, []);
 
   const dayDotsMap = useMemo(() => {
+    const todayIso = toIsoDateKey(now);
+    const currentTimeStr = toCurrentTimeStr(now);
     const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate();
     const flatTasks = [
       ...(allTasks?.manha || []),
@@ -315,19 +367,23 @@ const CalendarPanel = ({
       const colors = [];
 
       flatTasks.forEach((task) => {
-        if (occursOnAgendaDate(task, agendaDateKey)) {
-          colors.push({
-            color: task.cor || DEFAULT_TASK_COLOR,
-            completed: isTaskCompletedOnDate(task, agendaDateKey),
-          });
-        }
+        if (!occursOnAgendaDate(task, agendaDateKey)) return;
+
+        const completed = isTaskCompletedOnDate(task, agendaDateKey);
+        const missed = isTaskMissedOnDate(task, agendaDateKey, isoDateKey, todayIso, currentTimeStr);
+
+        colors.push({
+          color: task.cor || DEFAULT_TASK_COLOR,
+          completed,
+          missed,
+        });
       });
 
       map.set(isoDateKey, colors);
     }
 
     return map;
-  }, [allTasks, currentMonth]);
+  }, [allTasks, currentMonth, now]);
 
   return (
     <Card>
@@ -343,7 +399,7 @@ const CalendarPanel = ({
               center: 'title',
               right: '',
             }}
-            buttonText={{ today: 'Hoje' }}
+            buttonText={{ today: 'Hoje', prev: '‹', next: '›' }}
             events={[]}
             dayCellContent={(arg) => {
               const isoDateKey = toIsoDateKey(arg.date);

@@ -14,14 +14,25 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, Check, Clock, Flame, GripVertical, Repeat, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowUpDown,
+  Check,
+  Clock,
+  Flame,
+  GripVertical,
+  Repeat,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   getTaskStreak,
+  getTaskTimeStatus,
   isRecurringTask,
   sortTasksByTime,
+  TASK_TIME_STATUS,
   TASK_REMOVAL_SCOPES,
 } from '@/features/agenda/lib/task-utils';
 import {
@@ -40,18 +51,44 @@ const PERIOD_STYLES = {
   manha: {
     dot: 'bg-[var(--planner-amber)]',
     badge: 'bg-[var(--planner-amber-soft)] text-[var(--planner-terracotta-deep)]',
+    nowBadge: 'bg-[var(--planner-amber-soft)] text-[var(--planner-terracotta-deep)]',
+    nowDot: 'bg-[var(--planner-amber)]',
+    accentVar: '--planner-amber',
   },
   tarde: {
     dot: 'bg-[var(--planner-sage)]',
     badge: 'bg-[var(--planner-sage-soft)] text-[var(--planner-sage-deep)]',
+    nowBadge: 'bg-[var(--planner-sage-soft)] text-[var(--planner-sage-deep)]',
+    nowDot: 'bg-[var(--planner-sage)]',
+    accentVar: '--planner-sage',
   },
   noite: {
     dot: 'bg-[var(--planner-terracotta)]',
     badge: 'bg-[var(--planner-terracotta-soft)] text-[var(--planner-terracotta-deep)]',
+    nowBadge: 'bg-[var(--planner-terracotta-soft)] text-[var(--planner-terracotta-deep)]',
+    nowDot: 'bg-[var(--planner-terracotta)]',
+    accentVar: '--planner-terracotta',
   },
 };
 
-const STREAK_UNIT = { diario: ['dia', 'dias'], semanal: ['semana', 'semanas'], mensal: ['mês', 'meses'] };
+const TIME_STATUS_STYLES = {
+  [TASK_TIME_STATUS.overdue]: {
+    container: 'border-amber-500/35 bg-amber-500/5',
+    time: 'text-amber-500 font-semibold',
+    label: '· Atrasada',
+  },
+  [TASK_TIME_STATUS.missed]: {
+    container: 'border-red-500/35 bg-red-500/5',
+    time: 'text-red-500 font-semibold',
+    label: '· Perdida',
+  },
+};
+
+const STREAK_UNIT = {
+  diario: ['dia', 'dias'],
+  semanal: ['semana', 'semanas'],
+  mensal: ['mês', 'meses'],
+};
 
 const getRemoveTaskDescription = (task) => (
   isRecurringTask(task)
@@ -86,9 +123,18 @@ const TaskRemovalActions = ({ task, onRemoveTask }) => {
   );
 };
 
-const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) => {
+const SortableTaskItem = ({
+  task,
+  selectedDate,
+  isToday,
+  currentTimeStr,
+  onToggleTask,
+  onRemoveTask,
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const streak = getTaskStreak(task, selectedDate);
+  const timeStatus = getTaskTimeStatus(task, currentTimeStr, isToday);
+  const statusStyle = timeStatus ? TIME_STATUS_STYLES[timeStatus] : null;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -104,7 +150,9 @@ const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) =>
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-[1.35rem] border border-border/70 bg-background/55 p-4 transition-shadow duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+      className={`flex items-center gap-3 rounded-[1.35rem] border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
+        statusStyle ? statusStyle.container : 'border-border/70 bg-background/55'
+      }`}
     >
       <button
         {...attributes}
@@ -136,14 +184,18 @@ const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) =>
           {task.text}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+          <span className={`flex items-center gap-1 ${statusStyle ? statusStyle.time : 'text-muted-foreground'}`}>
+            {statusStyle
+              ? <AlertCircle className="w-3 h-3 shrink-0" />
+              : <Clock className="w-3 h-3 shrink-0" />
+            }
             {task.hora}
+            {statusStyle && <span>{statusStyle.label}</span>}
           </span>
 
           {task.frequencia && (
-            <span className="flex items-center gap-1 uppercase tracking-[0.12em]">
+            <span className="flex items-center gap-1 uppercase tracking-[0.12em] text-muted-foreground">
               <Repeat className="w-3 h-3" />
               {task.frequencia}
             </span>
@@ -191,11 +243,21 @@ const SortableTaskItem = ({ task, selectedDate, onToggleTask, onRemoveTask }) =>
   );
 };
 
-const TaskPeriodCard = ({ period, tasks, selectedDate, onRemoveTask, onReorderTasks, onToggleTask }) => {
+const TaskPeriodCard = ({
+  period,
+  tasks,
+  selectedDate,
+  isCurrentPeriod,
+  isToday,
+  currentTimeStr,
+  onRemoveTask,
+  onReorderTasks,
+  onToggleTask,
+}) => {
   const style = PERIOD_STYLES[period.id] ?? PERIOD_STYLES.tarde;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const handleDragEnd = ({ active, over }) => {
@@ -209,13 +271,21 @@ const TaskPeriodCard = ({ period, tasks, selectedDate, onRemoveTask, onReorderTa
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden transition-shadow duration-300">
+      {isCurrentPeriod && (
+        <div
+          className="h-0.5 w-full"
+          style={{ background: `var(${style.accentVar})` }}
+        />
+      )}
+
       <CardHeader className="border-b border-border/70 pb-4">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-xl font-medium text-foreground flex items-center">
-            <span className={`mr-3 h-3 w-3 rounded-full ${style.dot}`}></span>
+          <CardTitle className="text-xl font-medium text-foreground flex items-center gap-2">
+            <span className={`h-3 w-3 rounded-full ${style.dot}`} />
             {period.title}
           </CardTitle>
+
           <div className="flex items-center gap-2">
             {tasks.length > 1 && (
               <Button
@@ -233,6 +303,12 @@ const TaskPeriodCard = ({ period, tasks, selectedDate, onRemoveTask, onReorderTa
             </span>
           </div>
         </div>
+        {isCurrentPeriod && (
+              <span className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${style.nowBadge}`}>
+                <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${style.nowDot}`} />
+                Agora
+              </span>
+            )}
       </CardHeader>
 
       <CardContent className="pt-5">
@@ -243,13 +319,20 @@ const TaskPeriodCard = ({ period, tasks, selectedDate, onRemoveTask, onReorderTa
               <div className="font-medium">Nenhuma tarefa para este período.</div>
             </div>
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleDragEnd}
+            >
               <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {tasks.map((task) => (
                   <SortableTaskItem
                     key={task.id}
                     task={task}
                     selectedDate={selectedDate}
+                    isToday={isToday}
+                    currentTimeStr={currentTimeStr}
                     onToggleTask={onToggleTask}
                     onRemoveTask={onRemoveTask}
                   />

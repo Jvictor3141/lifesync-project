@@ -310,6 +310,49 @@ export const removeTaskFromAgenda = (
   return accumulator;
 }, createEmptyAgenda());
 
+// --- Time awareness ---
+
+export const TASK_TIME_STATUS = /** @type {const} */ ({
+  overdue: 'overdue',
+  missed: 'missed',
+});
+
+export const toCurrentTimeStr = (now = new Date()) =>
+  `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+export const getCurrentPeriod = (now = new Date()) => {
+  const hour = now.getHours();
+  if (hour >= 6 && hour < 12) return 'manha';
+  if (hour >= 12 && hour < 18) return 'tarde';
+  return 'noite';
+};
+
+export const getTaskTimeStatus = (task, currentTimeStr, isToday) => {
+  if (!isToday || task.completed || !task.hora || task.hora >= currentTimeStr) return null;
+
+  const [taskH, taskM] = task.hora.split(':').map(Number);
+  const [currH, currM] = currentTimeStr.split(':').map(Number);
+  const diffMinutes = currH * 60 + currM - (taskH * 60 + taskM);
+
+  return diffMinutes <= 10 ? TASK_TIME_STATUS.overdue : TASK_TIME_STATUS.missed;
+};
+
+export const getNextUpcomingTasks = (tasks, currentTimeStr, limit = 3) => {
+  const candidates = TASK_PERIODS.flatMap((p) => tasks?.[p.id] ?? [])
+    .filter((task) => !task.completed && task.hora > currentTimeStr)
+    .sort((a, b) => a.hora.localeCompare(b.hora));
+  return candidates.slice(0, limit);
+};
+
+export const isTaskMissedOnDate = (task, agendaDateKey, isoDateKey, todayIso, currentTimeStr) => {
+  if (isTaskCompletedOnDate(task, agendaDateKey)) return false;
+  if (isoDateKey < todayIso) return true;
+  if (isoDateKey === todayIso) {
+    return getTaskTimeStatus(task, currentTimeStr, true) === TASK_TIME_STATUS.missed;
+  }
+  return false;
+};
+
 // --- Streak calculation ---
 
 const shiftDate = (dateKey, days) => {

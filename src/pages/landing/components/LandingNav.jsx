@@ -43,7 +43,7 @@ export default function LandingNav({ onGetStarted }) {
         }}
       >
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, padding: '6px 30px', borderRadius: '20px', background: 'rgba(255,255,255)' }}>
           <img src={logoImg} alt="" style={{ height: 26, width: 'auto' }} />
           <span
             style={{
@@ -54,7 +54,7 @@ export default function LandingNav({ onGetStarted }) {
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ color: '#ffffff', fontWeight: 700 }}>Life</span>
+            <span style={{ color: 'rgb(30, 27, 75)', fontWeight: 700 }}>Life</span>
             <span
               style={{
                 background: 'linear-gradient(90deg, #2dc5a8 20%, #1ab4c8 100%)',
